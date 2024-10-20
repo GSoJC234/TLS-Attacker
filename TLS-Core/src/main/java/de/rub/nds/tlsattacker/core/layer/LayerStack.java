@@ -138,7 +138,13 @@ public class LayerStack {
         // Prepare layer configuration and clear previous executions
         for (int i = 0; i < getLayerList().size(); i++) {
             ProtocolLayer layer = getLayerList().get(i);
-            layer.clear();
+            try {
+                if (layer.currentInputStream == null || layer.currentInputStream.available() == 0) {
+                    layer.clear();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             layer.setLayerConfiguration(layerConfigurationList.get(i));
         }
         context.setTalkingConnectionEndType(
