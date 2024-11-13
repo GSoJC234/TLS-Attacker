@@ -10,11 +10,13 @@ package de.rub.nds.tlsattacker.core.workflow.action;
 
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.LayerConfiguration;
+import de.rub.nds.tlsattacker.core.layer.LayerStackProcessingResult;
 import de.rub.nds.tlsattacker.core.layer.ReceiveOneLayerConfiguration;
 import de.rub.nds.tlsattacker.core.layer.constant.ImplementedLayers;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.printer.LogPrinter;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.container.ActionHelperUtil;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -27,7 +29,8 @@ import org.apache.logging.log4j.Logger;
 public class ReceiveOneAction extends CommonReceiveAction {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    protected List<ProtocolMessage> receivedMessage;
+    protected List<ProtocolMessage> protocolMessages;
+    protected List<Record> recordMessages;
 
     public ReceiveOneAction() {
         super();
@@ -37,9 +40,18 @@ public class ReceiveOneAction extends CommonReceiveAction {
         super(connectionAlias);
     }
 
-    public ReceiveOneAction(String connectionAlias, List<ProtocolMessage> receivedMessage) {
+    public ReceiveOneAction(String connectionAlias, List<ProtocolMessage> protocolMessages) {
         super(connectionAlias);
-        this.receivedMessage = receivedMessage;
+        this.protocolMessages = protocolMessages;
+    }
+
+    public ReceiveOneAction(
+            String connectionAlias,
+            List<Record> recordMessages,
+            List<ProtocolMessage> protocolMessages) {
+        super(connectionAlias);
+        this.protocolMessages = protocolMessages;
+        this.recordMessages = recordMessages;
     }
 
     @Override
@@ -52,7 +64,8 @@ public class ReceiveOneAction extends CommonReceiveAction {
 
         LOGGER.debug("Receiving... (" + this.getClass().getSimpleName() + ")");
         List<LayerConfiguration<?>> layerConfigurations = createLayerConfiguration(state);
-        getReceiveResult(tlsContext.getLayerStack(), layerConfigurations);
+        LayerStackProcessingResult result =
+                getReceiveResult(tlsContext.getLayerStack(), layerConfigurations);
         setExecuted(true);
         LOGGER.debug(
                 "Receive Expected: {}", LogPrinter.toHumanReadableOneLine(layerConfigurations));
@@ -70,8 +83,19 @@ public class ReceiveOneAction extends CommonReceiveAction {
 
         for (ProtocolMessage message : getReceivedMessages()) {
             message.setShouldPrepareDefault(false);
-            receivedMessage.add(message);
+            protocolMessages.add(message);
         }
+
+        for (Record record : getReceivedRecords()) {
+            record.setShouldPrepare(false);
+            recordMessages.add(record);
+        }
+
+        // if (recordMessages.get(0).getContentMessageType() == ProtocolMessageType.HANDSHAKE
+        //        && protocolMessages.get(0) instanceof UnknownMessage) {
+        //    ((UnknownMessage) protocolMessages.get(0))
+        //            .setRecordContentMessageType(ProtocolMessageType.HANDSHAKE);
+        // }
     }
 
     @Override
@@ -95,7 +119,7 @@ public class ReceiveOneAction extends CommonReceiveAction {
         StringBuilder sb = new StringBuilder(super.toCompactString());
         sb.append(" (");
         if (getReceivedMessages() != null && (!getReceivedMessages().isEmpty())) {
-            sb.append(receivedMessage.get(0).toCompactString());
+            sb.append(protocolMessages.get(0).toCompactString());
         }
         sb.append(")");
         return sb.toString();
@@ -111,9 +135,9 @@ public class ReceiveOneAction extends CommonReceiveAction {
         TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
         List<LayerConfiguration<?>> configurationList = new LinkedList<>();
         configurationList.add(
-                new ReceiveOneLayerConfiguration(ImplementedLayers.SSL2, receivedMessage));
+                new ReceiveOneLayerConfiguration(ImplementedLayers.SSL2, protocolMessages));
         configurationList.add(
-                new ReceiveOneLayerConfiguration(ImplementedLayers.MESSAGE, receivedMessage));
+                new ReceiveOneLayerConfiguration(ImplementedLayers.MESSAGE, protocolMessages));
         return ActionHelperUtil.sortAndAddOptions(
                 tlsContext.getLayerStack(), false, getActionOptions(), configurationList);
     }

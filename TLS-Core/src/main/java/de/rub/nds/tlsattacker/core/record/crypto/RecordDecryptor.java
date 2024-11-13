@@ -59,6 +59,11 @@ public class RecordDecryptor extends Decryptor {
                     if (recordCipherList.indexOf(recordCipher) > 0) {
                         LOGGER.warn(
                                 "Failed to decrypt record, will try to process with previous cipher");
+                        if (recordCipherList.get(recordCipherList.indexOf(recordCipher) - 1)
+                                instanceof RecordNullCipher) {
+                            LOGGER.warn("previous cipher is NullCipher, decrypt is failed");
+                            throw new ParserException("previous cipher is NullCipher");
+                        }
                         recordCipherList
                                 .get(recordCipherList.indexOf(recordCipher) - 1)
                                 .decrypt(record);

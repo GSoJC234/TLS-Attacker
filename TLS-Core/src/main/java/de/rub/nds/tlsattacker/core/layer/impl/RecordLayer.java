@@ -194,10 +194,12 @@ public class RecordLayer extends ProtocolLayer<RecordLayerHint, Record> {
             if (encryptor.getRecordCipher(writeEpoch).getState().getVersion().isDTLS()) {
                 record.setEpoch(writeEpoch);
             }
-            RecordPreparator preparator =
-                    record.getRecordPreparator(context, encryptor, compressor, contentType);
-            preparator.prepare();
-            preparator.afterPrepare();
+            if (record.shouldPrepare()) {
+                RecordPreparator preparator =
+                        record.getRecordPreparator(context, encryptor, compressor, contentType);
+                preparator.prepare();
+                preparator.afterPrepare();
+            }
             try {
                 byte[] recordBytes = record.getRecordSerializer().serialize();
                 record.setCompleteRecordBytes(recordBytes);
@@ -227,15 +229,20 @@ public class RecordLayer extends ProtocolLayer<RecordLayerHint, Record> {
         try {
             while (!receivedHintRecord) {
                 Record record = new Record();
+                RecordLayerHint currentHint = null;
                 parser.parse(record);
                 // TODO it would be good to have a record handler here
                 ProtocolVersion protocolVersion =
                         ProtocolVersion.getProtocolVersion(record.getProtocolVersion().getValue());
                 context.setLastRecordVersion(protocolVersion);
-                decryptor.decrypt(record);
+                try {
+                    decryptor.decrypt(record);
+                } catch (ParserException ex) {
+                    record.setCleanProtocolMessageBytes(record.getProtocolMessageBytes());
+                    currentHint = new RecordLayerHint(ProtocolMessageType.UNKNOWN);
+                }
                 decompressor.decompress(record);
                 addProducedContainer(record);
-                RecordLayerHint currentHint;
                 // extract the type of the message we just read
                 if (context.getChooser().getSelectedProtocolVersion().isDTLS()) {
                     currentHint =
@@ -244,7 +251,9 @@ public class RecordLayer extends ProtocolLayer<RecordLayerHint, Record> {
                                     record.getEpoch().getValue(),
                                     record.getSequenceNumber().getValue().intValue());
                 } else {
-                    currentHint = new RecordLayerHint(record.getContentMessageType());
+                    if (currentHint == null) {
+                        currentHint = new RecordLayerHint(record.getContentMessageType());
+                    }
                 }
                 // only set the currentInputStream when we received the expected message
                 if (desiredHint == null || currentHint.equals(desiredHint)) {

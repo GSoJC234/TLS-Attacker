@@ -83,8 +83,10 @@ public class MessageLayer extends ProtocolLayer<LayerProcessingHint, ProtocolMes
                 }
                 if (!message.isHandshakeMessage()) {
                     // only handshake messages may share a record
-                    flushCollectedMessages(
-                            runningProtocolMessageType, collectedMessageStream, false);
+                    // [Jaehun]
+                    // undecrypted handshake message may share a record
+                    // flushCollectedMessages(
+                    //        runningProtocolMessageType, collectedMessageStream, false);
                 }
                 runningProtocolMessageType = message.getProtocolMessageType();
                 processMessage(message, collectedMessageStream);
