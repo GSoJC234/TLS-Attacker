@@ -11,15 +11,18 @@ package de.rub.nds.tlsattacker.core.workflow.action;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.Objects;
 import java.util.function.Supplier;
 
 @XmlRootElement(name = "AssertEqualAction")
 public class AssertEqualAction<T> extends TlsAction {
 
-    private final Supplier<T> value1;
-    private final Supplier<T> value2;
+    @XmlTransient private Supplier<T> value1;
+    @XmlTransient private Supplier<T> value2;
     private boolean comparisonResult;
+
+    public AssertEqualAction() {}
 
     public AssertEqualAction(Supplier<T> value1, Supplier<T> value2) {
         this.value1 = value1;
@@ -29,6 +32,7 @@ public class AssertEqualAction<T> extends TlsAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         comparisonResult = Objects.equals(value1.get(), value2.get());
+        setExecuted(true);
     }
 
     @Override

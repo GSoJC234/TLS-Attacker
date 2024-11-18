@@ -11,14 +11,17 @@ package de.rub.nds.tlsattacker.core.workflow.action;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 import java.util.function.Supplier;
 
 @XmlRootElement(name = "FieldAction")
 public class FieldAction<T> extends TlsAction {
 
-    private List<T> fieldContainer = null;
-    private final Supplier<T> fieldSupplier;
+    @XmlTransient private List<T> fieldContainer = null;
+    @XmlTransient private Supplier<T> fieldSupplier = null;
+
+    public FieldAction() {}
 
     public FieldAction(List<T> fieldContainer, Supplier<T> fieldSupplier) {
         this.fieldContainer = fieldContainer;
@@ -30,14 +33,16 @@ public class FieldAction<T> extends TlsAction {
         T fieldValue = fieldSupplier.get();
         if (fieldValue != null) {
             fieldContainer.add(fieldValue);
+            setExecuted(true);
         } else {
-            throw new ActionExecutionException("Failed to supply a valid value");
+            fieldContainer.add(null);
         }
     }
 
     @Override
     public void reset() {
         fieldContainer.clear();
+        setExecuted(false);
     }
 
     @Override

@@ -15,9 +15,12 @@ import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
+import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
+import jakarta.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
+@XmlRootElement(name = "BuildServerHelloAction")
 public class BuildServerHelloAction extends TlsAction {
 
     private List<ProtocolMessage> container = null;
@@ -30,6 +33,9 @@ public class BuildServerHelloAction extends TlsAction {
     private List<byte[]> session_id_container = null;
     private List<Boolean> session_id_length_container = null;
     private List<CompressionMethod> compression_container = null;
+
+    public BuildServerHelloAction() {}
+    ;
 
     public BuildServerHelloAction(List<ProtocolMessage> container) {
         this.container = container;
@@ -69,26 +75,38 @@ public class BuildServerHelloAction extends TlsAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        if(!(message_type_container.get(0) == HandshakeMessageType.SERVER_HELLO)){
-            throw new ActionExecutionException("Error message type:" + message_type_container.get(0));
+        if (!(message_type_container.get(0) == HandshakeMessageType.SERVER_HELLO)) {
+            throw new ActionExecutionException(
+                    "Error message type:" + message_type_container.get(0));
         }
 
         ServerHelloMessage message = new ServerHelloMessage();
+        message.setShouldPrepareDefault(false);
+        message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
         message.setProtocolVersion(version_container.get(0).getValue());
         message.setSelectedCipherSuite(suite_container.get(0).getByteValue());
         message.setRandom(random_container.get(0));
         message.setSessionId(session_id_container.get(0));
-        if(session_id_length_container.get(0)){
+        if (session_id_length_container.get(0)) {
             message.setSessionIdLength(session_id_container.get(0).length);
         }
         message.setSelectedCompressionMethod(compression_container.get(0).getValue());
-        if(message_length_container.get(0)){
-            message.setLength(message.getMessageContent().getValue().length);
+        ServerHelloSerializer serializer = new ServerHelloSerializer(message);
+        message.setMessageContent(serializer.serializeHandshakeMessageContent());
+        message.setLength(message.getMessageContent().getValue().length);
+        if (!message_length_container.get(0)) {
+            throw new ActionExecutionException("Unsupported modified message length");
         }
+        message.setCompleteResultingMessage(serializer.serialize());
+
+        container.add(message);
+        setExecuted(true);
     }
 
     @Override
-    public void reset() {}
+    public void reset() {
+        setExecuted(false);
+    }
 
     @Override
     public boolean executedAsPlanned() {
