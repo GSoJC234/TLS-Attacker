@@ -15,9 +15,11 @@ import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "BuildServerHelloAction")
@@ -33,6 +35,7 @@ public class BuildServerHelloAction extends TlsAction {
     private List<byte[]> session_id_container = null;
     private List<Boolean> session_id_length_container = null;
     private List<CompressionMethod> compression_container = null;
+    private List<List<ExtensionMessage>> extension_container = null;
 
     public BuildServerHelloAction() {}
     ;
@@ -73,13 +76,12 @@ public class BuildServerHelloAction extends TlsAction {
         this.compression_container = compression_container;
     }
 
+    public void setExtension(List<List<ExtensionMessage>> extension_container) {
+        this.extension_container = extension_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
-        if (!(message_type_container.get(0) == HandshakeMessageType.SERVER_HELLO)) {
-            throw new ActionExecutionException(
-                    "Error message type:" + message_type_container.get(0));
-        }
-
         ServerHelloMessage message = new ServerHelloMessage();
         message.setShouldPrepareDefault(false);
         message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
@@ -91,6 +93,12 @@ public class BuildServerHelloAction extends TlsAction {
             message.setSessionIdLength(session_id_container.get(0).length);
         }
         message.setSelectedCompressionMethod(compression_container.get(0).getValue());
+        List<ExtensionMessage> extensionMessageList = new ArrayList<ExtensionMessage>();
+        for (List<ExtensionMessage> element : extension_container) {
+            extensionMessageList.add(element.get(0));
+        }
+        message.setExtensions(extensionMessageList);
+
         ServerHelloSerializer serializer = new ServerHelloSerializer(message);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
