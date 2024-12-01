@@ -17,17 +17,18 @@ import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.serializer.RecordSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 
 @XmlRootElement(name = "BuildRecordAction")
 public class BuildRecordAction extends TlsAction {
 
-    private List<Record> record_container = null;
+    @XmlTransient private List<Record> record_container = null;
 
-    private List<ProtocolMessageType> record_type_container = null;
-    private List<ProtocolVersion> version_container = null;
-    private List<Boolean> length_container = null;
-    private List<ProtocolMessage> message_container = null;
+    @XmlTransient private List<ProtocolMessageType> record_type_container = null;
+    @XmlTransient private List<ProtocolVersion> version_container = null;
+    @XmlTransient private List<Boolean> length_container = null;
+    @XmlTransient private List<ProtocolMessage> message_container = null;
 
     public BuildRecordAction() {}
 

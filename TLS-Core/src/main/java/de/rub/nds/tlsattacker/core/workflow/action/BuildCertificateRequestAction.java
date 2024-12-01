@@ -16,17 +16,20 @@ import de.rub.nds.tlsattacker.core.protocol.message.CertificateRequestMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateRequestSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 
 @XmlRootElement(name = "BuildCertificateRequestAction")
 public class BuildCertificateRequestAction extends TlsAction {
 
-    private List<ProtocolMessage> container = null;
+    @XmlTransient private List<ProtocolMessage> container = null;
 
-    private List<HandshakeMessageType> message_type_container = null;
-    private List<Boolean> message_length_container = null;
-    private List<byte[]> certificate_request_container = null;
-    private List<Boolean> certificate_request_length_container = null;
+    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
+    @XmlTransient private List<Boolean> message_length_container = null;
+    @XmlTransient private List<byte[]> certificate_request_container = null;
+    @XmlTransient private List<Boolean> certificate_request_length_container = null;
+
+    public BuildCertificateRequestAction() {}
 
     public BuildCertificateRequestAction(List<ProtocolMessage> container) {
         this.container = container;

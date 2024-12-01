@@ -19,26 +19,26 @@ import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement(name = "BuildServerHelloAction")
 public class BuildServerHelloAction extends TlsAction {
 
-    private List<ProtocolMessage> container = null;
+    @XmlTransient private List<ProtocolMessage> container = null;
 
-    private List<HandshakeMessageType> message_type_container = null;
-    private List<Boolean> message_length_container = null;
-    private List<ProtocolVersion> version_container = null;
-    private List<CipherSuite> suite_container = null;
-    private List<byte[]> random_container = null;
-    private List<byte[]> session_id_container = null;
-    private List<Boolean> session_id_length_container = null;
-    private List<CompressionMethod> compression_container = null;
-    private List<List<ExtensionMessage>> extension_container = null;
+    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
+    @XmlTransient private List<Boolean> message_length_container = null;
+    @XmlTransient private List<ProtocolVersion> version_container = null;
+    @XmlTransient private List<CipherSuite> suite_container = null;
+    @XmlTransient private List<byte[]> random_container = null;
+    @XmlTransient private List<byte[]> session_id_container = null;
+    @XmlTransient private List<Boolean> session_id_length_container = null;
+    @XmlTransient private List<CompressionMethod> compression_container = null;
+    @XmlTransient private List<List<ExtensionMessage>> extension_container = null;
 
     public BuildServerHelloAction() {}
-    ;
 
     public BuildServerHelloAction(List<ProtocolMessage> container) {
         this.container = container;

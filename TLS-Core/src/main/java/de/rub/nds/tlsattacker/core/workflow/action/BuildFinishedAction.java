@@ -15,16 +15,19 @@ import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.FinishedSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 
 @XmlRootElement(name = "BuildFinishedAction")
 public class BuildFinishedAction extends TlsAction {
 
-    private List<ProtocolMessage> container = null;
+    @XmlTransient private List<ProtocolMessage> container = null;
 
-    private List<HandshakeMessageType> message_type_container = null;
-    private List<Boolean> message_length_container = null;
-    private List<byte[]> verify_data_container = null;
+    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
+    @XmlTransient private List<Boolean> message_length_container = null;
+    @XmlTransient private List<byte[]> verify_data_container = null;
+
+    public BuildFinishedAction() {}
 
     public BuildFinishedAction(List<ProtocolMessage> container) {
         this.container = container;

@@ -15,18 +15,18 @@ import de.rub.nds.tlsattacker.core.protocol.message.EncryptedExtensionsMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.EncryptedExtensionsSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 
 @XmlRootElement(name = "BuildEncryptedExtensionAction")
 public class BuildEncryptedExtensionAction extends TlsAction {
 
-    private List<ProtocolMessage> container = null;
+    @XmlTransient private List<ProtocolMessage> container = null;
 
-    private List<HandshakeMessageType> message_type_container = null;
-    private List<Boolean> message_length_container = null;
+    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
+    @XmlTransient private List<Boolean> message_length_container = null;
 
     public BuildEncryptedExtensionAction() {}
-    ;
 
     public BuildEncryptedExtensionAction(List<ProtocolMessage> container) {
         this.container = container;
