@@ -6,7 +6,7 @@
  * Licensed under Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0.txt
  */
-package de.rub.nds.tlsattacker.core.workflow.action;
+package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.tlsattacker.core.constants.CipherSuite;
 import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
@@ -14,17 +14,21 @@ import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.handler.ServerHelloHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
+import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
+import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @XmlRootElement(name = "BuildServerHelloAction")
-public class BuildServerHelloAction extends TlsAction {
+public class BuildServerHelloAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
 
@@ -38,9 +42,25 @@ public class BuildServerHelloAction extends TlsAction {
     @XmlTransient private List<CompressionMethod> compression_container = null;
     @XmlTransient private List<List<ExtensionMessage>> extension_container = null;
 
-    public BuildServerHelloAction() {}
+    public BuildServerHelloAction() {
+        super();
+    }
 
-    public BuildServerHelloAction(List<ProtocolMessage> container) {
+    public BuildServerHelloAction(String alias) {
+        super(alias);
+    }
+
+    public BuildServerHelloAction(Set<ActionOption> actionOptions, String alias) {
+        super(actionOptions, alias);
+        this.connectionAlias = alias;
+    }
+
+    public BuildServerHelloAction(Set<ActionOption> actionOptions) {
+        super(actionOptions);
+    }
+
+    public BuildServerHelloAction(String alias, List<ProtocolMessage> container) {
+        super(alias);
         this.container = container;
     }
 
@@ -106,6 +126,10 @@ public class BuildServerHelloAction extends TlsAction {
             throw new ActionExecutionException("Unsupported modified message length");
         }
         message.setCompleteResultingMessage(serializer.serialize());
+
+        ServerHelloHandler handler = message.getHandler(state.getTlsContext(getConnectionAlias()));
+        handler.adjustContext(message);
+        message.setAdjustContext(false);
 
         container.add(message);
         setExecuted(true);

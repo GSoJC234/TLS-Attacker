@@ -6,21 +6,25 @@
  * Licensed under Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0.txt
  */
-package de.rub.nds.tlsattacker.core.workflow.action;
+package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.handler.CertificateVerifyHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.CertificateVerifyMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateVerifySerializer;
 import de.rub.nds.tlsattacker.core.state.State;
+import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
+import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
+import java.util.Set;
 
 @XmlRootElement(name = "BuildCertificateVerifyAction")
-public class BuildCertificateVerifyAction extends TlsAction {
+public class BuildCertificateVerifyAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
 
@@ -29,9 +33,25 @@ public class BuildCertificateVerifyAction extends TlsAction {
     @XmlTransient private List<byte[]> signature_container = null;
     @XmlTransient private List<Boolean> signature_length_container = null;
 
-    public BuildCertificateVerifyAction() {}
+    public BuildCertificateVerifyAction() {
+        super();
+    }
 
-    public BuildCertificateVerifyAction(List<ProtocolMessage> container) {
+    public BuildCertificateVerifyAction(String alias) {
+        super(alias);
+    }
+
+    public BuildCertificateVerifyAction(Set<ActionOption> actionOptions, String alias) {
+        super(actionOptions, alias);
+        this.connectionAlias = alias;
+    }
+
+    public BuildCertificateVerifyAction(Set<ActionOption> actionOptions) {
+        super(actionOptions);
+    }
+
+    public BuildCertificateVerifyAction(String alias, List<ProtocolMessage> container) {
+        super(alias);
         this.container = container;
     }
 
@@ -69,6 +89,11 @@ public class BuildCertificateVerifyAction extends TlsAction {
             throw new ActionExecutionException("Unsupported modified message length");
         }
         message.setCompleteResultingMessage(serializer.serialize());
+
+        CertificateVerifyHandler handler =
+                new CertificateVerifyHandler(state.getTlsContext(getConnectionAlias()));
+        handler.adjustContext(message);
+        message.setAdjustContext(false);
 
         container.add(message);
         setExecuted(true);
