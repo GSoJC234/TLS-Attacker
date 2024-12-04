@@ -9,12 +9,12 @@
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
-import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.cipher.RecordCipher;
 import de.rub.nds.tlsattacker.core.record.cipher.RecordCipherFactory;
 import de.rub.nds.tlsattacker.core.record.cipher.cryptohelper.KeySet;
+import de.rub.nds.tlsattacker.core.record.crypto.RecordEncryptor;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -59,12 +59,9 @@ public class EncryptAction extends ConnectionBoundAction {
         TlsContext context = state.getTlsContext(getConnectionAlias());
 
         RecordCipher cipher = RecordCipherFactory.getRecordCipher(context, keyset, true);
-        try {
-            cipher.encrypt(record);
-            setExecuted(true);
-        } catch (CryptoException e) {
-            throw new RuntimeException(e);
-        }
+        RecordEncryptor encryptor = new RecordEncryptor(cipher, context);
+        encryptor.encrypt(record);
+        setExecuted(true);
     }
 
     @Override
