@@ -8,22 +8,23 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
-import de.rub.nds.tlsattacker.core.constants.CipherSuite;
-import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
-import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
-import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.handler.ServerHelloHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.*;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
+import de.rub.nds.tlsattacker.core.protocol.serializer.extension.*;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
+import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
-import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -40,7 +41,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<byte[]> session_id_container = null;
     @XmlTransient private List<Boolean> session_id_length_container = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
-    @XmlTransient private List<List<ExtensionMessage>> extension_container = null;
+    @XmlTransient private List<List<?>> extension_container = null;
 
     public BuildServerHelloAction() {
         super();
@@ -96,7 +97,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         this.compression_container = compression_container;
     }
 
-    public void setExtension(List<List<ExtensionMessage>> extension_container) {
+    public void setExtension(List<List<?>> extension_container) {
         this.extension_container = extension_container;
     }
 
@@ -113,11 +114,8 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
             message.setSessionIdLength(session_id_container.get(0).length);
         }
         message.setSelectedCompressionMethod(compression_container.get(0).getValue());
-        List<ExtensionMessage> extensionMessageList = new ArrayList<ExtensionMessage>();
-        for (List<ExtensionMessage> element : extension_container) {
-            extensionMessageList.add(element.get(0));
-        }
-        message.setExtensions(extensionMessageList);
+        message.setExtensionBytes(generateExtensionMessages());
+        message.setExtensionsLength(message.getExtensionBytes().getValue().length);
 
         ServerHelloSerializer serializer = new ServerHelloSerializer(message);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
@@ -133,6 +131,76 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
 
         container.add(message);
         setExecuted(true);
+    }
+
+    private byte[] generateExtensionMessages() {
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        try {
+            for (List<?> extension : extension_container) {
+                Object element = extension.get(0);
+                if (element instanceof NamedGroup) {
+                    EllipticCurvesExtensionMessage message = new EllipticCurvesExtensionMessage();
+                    message.setSupportedGroups(((NamedGroup) element).getValue());
+                    message.setSupportedGroupsLength(
+                            message.getSupportedGroups().getValue().length);
+                    message.setExtensionType(ExtensionType.ELLIPTIC_CURVES.getValue());
+
+                    EllipticCurvesExtensionSerializer serializer =
+                            new EllipticCurvesExtensionSerializer(message);
+                    message.setExtensionContent(serializer.serializeExtensionContent());
+                    message.setExtensionLength(message.getExtensionContent().getValue().length);
+
+                    byteStream.write(serializer.serialize());
+                } else if (element instanceof ProtocolVersion) {
+                    SupportedVersionsExtensionMessage message =
+                            new SupportedVersionsExtensionMessage();
+                    message.setSupportedVersions(((ProtocolVersion) element).getValue());
+                    message.setExtensionType(ExtensionType.SUPPORTED_VERSIONS.getValue());
+
+                    SupportedVersionsExtensionSerializer serializer =
+                            new SupportedVersionsExtensionSerializer(message);
+                    message.setExtensionContent(serializer.serializeExtensionContent());
+                    message.setExtensionLength(message.getExtensionContent().getValue().length);
+                    message.setExtensionBytes(serializer.serialize());
+
+                    byteStream.write(message.getExtensionBytes().getValue());
+                } else if (element instanceof SignatureAndHashAlgorithm) {
+                    SignatureAndHashAlgorithmsExtensionMessage message =
+                            new SignatureAndHashAlgorithmsExtensionMessage();
+                    message.setSignatureAndHashAlgorithms(
+                            ((SignatureAndHashAlgorithm) element).getByteValue());
+                    message.setSignatureAndHashAlgorithmsLength(
+                            message.getSignatureAndHashAlgorithms().getValue().length);
+                    message.setExtensionType(
+                            ExtensionType.SIGNATURE_AND_HASH_ALGORITHMS.getValue());
+
+                    SignatureAndHashAlgorithmsExtensionSerializer serializer =
+                            new SignatureAndHashAlgorithmsExtensionSerializer(message);
+                    message.setExtensionContent(serializer.serializeExtensionContent());
+                    message.setExtensionLength(message.getExtensionContent().getValue().length);
+
+                    byteStream.write(serializer.serialize());
+                } else if (element instanceof KeyShareEntry) {
+                    KeyShareEntrySerializer serializer =
+                            new KeyShareEntrySerializer((KeyShareEntry) element);
+                    KeyShareExtensionMessage message = new KeyShareExtensionMessage();
+                    message.setExtensionType(ExtensionType.KEY_SHARE.getValue());
+
+                    message.setKeyShareListBytes(serializer.serialize());
+                    KeyShareExtensionSerializer serializer2 =
+                            new KeyShareExtensionSerializer(message, ConnectionEndType.SERVER);
+                    message.setExtensionContent(serializer2.serializeExtensionContent());
+                    message.setExtensionLength(message.getExtensionContent().getValue().length);
+
+                    message.setExtensionBytes(serializer2.serialize());
+
+                    byteStream.write(message.getExtensionBytes().getValue());
+                }
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return byteStream.toByteArray();
     }
 
     @Override

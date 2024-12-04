@@ -8,18 +8,21 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
-import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
-import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.handler.CertificateRequestHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.CertificateRequestMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.SignatureAndHashAlgorithmsExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateRequestSerializer;
+import de.rub.nds.tlsattacker.core.protocol.serializer.extension.*;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
@@ -32,6 +35,7 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
     @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<byte[]> certificate_request_container = null;
     @XmlTransient private List<Boolean> certificate_request_length_container = null;
+    @XmlTransient private List<List<?>> extension_container = null;
 
     public BuildCertificateRequestAction() {
         super();
@@ -71,6 +75,10 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         this.certificate_request_length_container = certificate_request_context_len;
     }
 
+    public void setExtension(List<List<?>> extension_container) {
+        this.extension_container = extension_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         CertificateRequestMessage message = new CertificateRequestMessage();
@@ -80,6 +88,9 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         if (certificate_request_length_container.get(0)) {
             message.setCertificateRequestContextLength(certificate_request_container.get(0).length);
         }
+        message.setExtensionBytes(generateExtensionMessages());
+        message.setExtensionsLength(message.getExtensionBytes().getValue().length);
+        message.setClientCertificateTypesCount(0);
 
         CertificateRequestSerializer serializer =
                 new CertificateRequestSerializer(message, ProtocolVersion.TLS12);
@@ -97,6 +108,35 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
 
         container.add(message);
         setExecuted(true);
+    }
+
+    private byte[] generateExtensionMessages() {
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        try {
+            for (List<?> extension : extension_container) {
+                Object element = extension.get(0);
+                if (element instanceof SignatureAndHashAlgorithm) {
+                    SignatureAndHashAlgorithmsExtensionMessage message =
+                            new SignatureAndHashAlgorithmsExtensionMessage();
+                    message.setSignatureAndHashAlgorithms(
+                            ((SignatureAndHashAlgorithm) element).getByteValue());
+                    message.setSignatureAndHashAlgorithmsLength(
+                            message.getSignatureAndHashAlgorithms().getValue().length);
+                    message.setExtensionType(
+                            ExtensionType.SIGNATURE_AND_HASH_ALGORITHMS.getValue());
+
+                    SignatureAndHashAlgorithmsExtensionSerializer serializer =
+                            new SignatureAndHashAlgorithmsExtensionSerializer(message);
+                    message.setExtensionContent(serializer.serializeExtensionContent());
+                    message.setExtensionLength(message.getExtensionContent().getValue().length);
+
+                    byteStream.write(serializer.serialize());
+                }
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return byteStream.toByteArray();
     }
 
     @Override

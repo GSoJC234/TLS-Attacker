@@ -3,6 +3,8 @@
 
   <xs:element name="ReceiveOne" type="receiveOneAction"/>
 
+  <xs:element name="BuildHandshakeKeySet" type="buildHandshakeKeySetAction"/>
+
   <xs:element name="Alert" type="alertMessage"/>
 
   <xs:element name="AlpnExtension" type="alpnExtensionMessage"/>
@@ -474,6 +476,7 @@
       </xs:choice>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element name="ReceiveOne" type="receiveOneAction"/>
+        <xs:element name="BuildHandshakeKeySet" type="buildHandshakeKeySetAction"/>
         <xs:element name="ActivateDecryption" type="activateDecryptionAction"/>
         <xs:element name="ActivateEncryption" type="activateEncryptionAction"/>
         <xs:element name="ApplyBufferedMessages" type="applyBufferedMessagesAction"/>

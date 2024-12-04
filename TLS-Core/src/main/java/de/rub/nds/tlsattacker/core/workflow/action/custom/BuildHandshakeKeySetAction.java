@@ -28,7 +28,7 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Set;
 
-@XmlRootElement(name = "BuildHandshakeKeySetAction")
+@XmlRootElement(name = "BuildHandshakeKeySet")
 public class BuildHandshakeKeySetAction extends ConnectionBoundAction {
 
     @XmlTransient private List<KeySet> container;
@@ -171,6 +171,7 @@ public class BuildHandshakeKeySetAction extends ConnectionBoundAction {
         } catch (CryptoException e) {
             throw new RuntimeException(e);
         }
+        setExecuted(true);
     }
 
     @Override

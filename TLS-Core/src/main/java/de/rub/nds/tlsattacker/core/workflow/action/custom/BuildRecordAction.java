@@ -59,6 +59,7 @@ public class BuildRecordAction extends TlsAction {
         record.setShouldPrepare(false);
         record.setContentType(record_type_container.get(0).getValue());
         record.setProtocolVersion((version_container.get(0)).getValue());
+        //TODO: set record computation
         ProtocolMessage message = message_container.get(0);
         if (message instanceof HandshakeMessage) {
             record.setProtocolMessageBytes(message.getCompleteResultingMessage());
