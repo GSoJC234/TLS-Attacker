@@ -11,18 +11,19 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom;
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
+import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.HandshakeMessage;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.serializer.RecordSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
-import de.rub.nds.tlsattacker.core.workflow.action.TlsAction;
+import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 
 @XmlRootElement(name = "BuildRecordAction")
-public class BuildRecordAction extends TlsAction {
+public class BuildRecordAction extends ConnectionBoundAction {
 
     @XmlTransient private List<Record> record_container = null;
 
@@ -55,14 +56,18 @@ public class BuildRecordAction extends TlsAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
+        TlsContext context = state.getTlsContext(getConnectionAlias());
+
         Record record = new Record();
         record.setShouldPrepare(false);
         record.setContentType(record_type_container.get(0).getValue());
+        record.setContentMessageType(record_type_container.get(0));
         record.setProtocolVersion((version_container.get(0)).getValue());
-        //TODO: set record computation
+
         ProtocolMessage message = message_container.get(0);
         if (message instanceof HandshakeMessage) {
             record.setProtocolMessageBytes(message.getCompleteResultingMessage());
+            record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
             record.setLength(record.getProtocolMessageBytes().getValue().length);
         }
 
