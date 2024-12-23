@@ -17,6 +17,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.extension.*;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.*;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -128,6 +129,8 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         }
         message.setCompleteResultingMessage(serializer.serialize());
 
+        Context context = state.getContext(getConnectionAlias());
+        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         ServerHelloHandler handler = message.getHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);
         message.setAdjustContext(false);
@@ -170,6 +173,11 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
                         new KeyShareEntrySerializer((KeyShareEntry) element);
                 KeyShareExtensionMessage message = new KeyShareExtensionMessage();
                 message.setExtensionType(ExtensionType.KEY_SHARE.getValue());
+
+                List<KeyShareEntry> entryList = new ArrayList<>();
+                entryList.add((KeyShareEntry) element);
+                message.setKeyShareList(entryList);
+                message.setKeyShareListLength(entryList.size());
 
                 message.setKeyShareListBytes(serializer.serialize());
                 KeyShareExtensionSerializer serializer2 =

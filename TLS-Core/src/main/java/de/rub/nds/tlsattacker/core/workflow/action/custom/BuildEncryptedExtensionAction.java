@@ -16,6 +16,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.EncryptedExtensionsMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.EllipticCurvesExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.EncryptedExtensionsSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.*;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -85,6 +86,8 @@ public class BuildEncryptedExtensionAction extends ConnectionBoundAction {
         }
         message.setCompleteResultingMessage(serializer.serialize());
 
+        Context context = state.getContext(getConnectionAlias());
+        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         EncryptedExtensionsHandler handler =
                 new EncryptedExtensionsHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);

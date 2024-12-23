@@ -18,6 +18,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.cert.CertificateEntry;
 import de.rub.nds.tlsattacker.core.protocol.preparator.cert.CertificateEntryPreparator;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateMessageSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.cert.CertificatePairSerializer;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -36,6 +37,8 @@ public class BuildCertificateAction extends ConnectionBoundAction {
     @XmlTransient private List<HandshakeMessageType> message_type_container = null;
     @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<CertificateEntry> entry_container = null;
+    @XmlTransient private List<byte[]> certificate_request_container = null;
+    @XmlTransient private List<Boolean> certificate_request_length_container = null;
 
     public BuildCertificateAction() {
         super();
@@ -71,12 +74,17 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         this.entry_container = entry_container;
     }
 
+    public void setCertificateRequestContext(List<byte[]> certificate_request_context) {
+        this.certificate_request_container = certificate_request_context;
+    }
+
+    public void setCertificateRequestContextLen(List<Boolean> certificate_request_context_len) {
+        this.certificate_request_length_container = certificate_request_context_len;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
-        if (!(message_type_container.get(0) == HandshakeMessageType.CERTIFICATE)) {
-            throw new ActionExecutionException(
-                    "Error message type:" + message_type_container.get(0));
-        }
+        Context context = state.getContext(getConnectionAlias());
 
         CertificateMessage message = new CertificateMessage();
         message.setShouldPrepareDefault(false);
@@ -93,7 +101,8 @@ public class BuildCertificateAction extends ConnectionBoundAction {
                     new CertificateEntryPreparator(state.getContext().getChooser(), entry);
             preparator.prepare();
             CertificatePairSerializer serializer =
-                    new CertificatePairSerializer(entry, ProtocolVersion.TLS12);
+                    new CertificatePairSerializer(
+                            entry, context.getTlsContext().getSelectedProtocolVersion());
             try {
                 stream.write(serializer.serialize());
             } catch (IOException ex) {
@@ -104,8 +113,24 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         message.setCertificatesListBytes(stream.toByteArray());
         message.setCertificatesListLength(message.getCertificatesListBytes().getValue().length);
 
+        if (context.getTlsContext().getSelectedProtocolVersion() == ProtocolVersion.TLS13) {
+            switch (context.getConnection().getLocalConnectionEndType()) {
+                case CLIENT:
+                    message.setRequestContext(this.certificate_request_container.get(0));
+                    message.setRequestContextLength(message.getRequestContextLength());
+                    break;
+                case SERVER:
+                    message.setRequestContext(new byte[] {});
+                    message.setRequestContextLength(0);
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected connection end type");
+            }
+        }
+
         CertificateMessageSerializer serializer =
-                new CertificateMessageSerializer(message, ProtocolVersion.TLS12);
+                new CertificateMessageSerializer(
+                        message, context.getTlsContext().getSelectedProtocolVersion());
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         if (!message_length_container.get(0)) {
@@ -113,6 +138,7 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         }
         message.setCompleteResultingMessage(serializer.serialize());
 
+        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         CertificateMessageHandler handler =
                 new CertificateMessageHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);

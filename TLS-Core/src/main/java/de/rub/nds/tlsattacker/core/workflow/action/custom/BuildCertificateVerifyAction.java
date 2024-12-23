@@ -9,12 +9,12 @@
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
-import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.handler.CertificateVerifyHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.CertificateVerifyMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateVerifySerializer;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -73,6 +73,8 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
+        Context context = state.getContext(getConnectionAlias());
+
         CertificateVerifyMessage message = new CertificateVerifyMessage();
         message.setShouldPrepareDefault(false);
         message.setType(message_type_container.get(0).getValue());
@@ -82,7 +84,8 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         }
 
         CertificateVerifySerializer serializer =
-                new CertificateVerifySerializer(message, ProtocolVersion.TLS12);
+                new CertificateVerifySerializer(
+                        message, context.getTlsContext().getSelectedProtocolVersion());
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         if (!message_length_container.get(0)) {
@@ -90,6 +93,7 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         }
         message.setCompleteResultingMessage(serializer.serialize());
 
+        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         CertificateVerifyHandler handler =
                 new CertificateVerifyHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);

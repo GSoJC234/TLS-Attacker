@@ -16,6 +16,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.CertificateRequestMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.SignatureAndHashAlgorithmsExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateRequestSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.*;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -81,6 +82,8 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
+        Context context = state.getContext(getConnectionAlias());
+
         CertificateRequestMessage message = new CertificateRequestMessage();
         message.setShouldPrepareDefault(false);
         message.setType(message_type_container.get(0).getValue());
@@ -93,7 +96,8 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         message.setClientCertificateTypesCount(0);
 
         CertificateRequestSerializer serializer =
-                new CertificateRequestSerializer(message, ProtocolVersion.TLS12);
+                new CertificateRequestSerializer(
+                        message, context.getTlsContext().getSelectedProtocolVersion());
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         if (!message_length_container.get(0)) {
@@ -101,6 +105,7 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         }
         message.setCompleteResultingMessage(serializer.serialize());
 
+        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         CertificateRequestHandler handler =
                 new CertificateRequestHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);

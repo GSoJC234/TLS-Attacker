@@ -14,6 +14,7 @@ import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.handler.FinishedHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.FinishedSerializer;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -80,6 +81,8 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         }
         message.setCompleteResultingMessage(serializer.serialize());
 
+        Context context = state.getContext(getConnectionAlias());
+        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         FinishedHandler handler = new FinishedHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);
         message.setAdjustContext(false);

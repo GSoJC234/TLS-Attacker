@@ -99,10 +99,12 @@ public class RecordLayer extends ProtocolLayer<RecordLayerHint, Record> {
                 if (record.getCleanProtocolMessageBytes() == null) {
                     record.setCleanProtocolMessageBytes(new byte[0]);
                 }
-                RecordPreparator preparator =
-                        record.getRecordPreparator(context, encryptor, compressor, contentType);
-                preparator.prepare();
-                preparator.afterPrepare();
+                if (record.shouldPrepare()) {
+                    RecordPreparator preparator =
+                            record.getRecordPreparator(context, encryptor, compressor, contentType);
+                    preparator.prepare();
+                    preparator.afterPrepare();
+                }
                 RecordSerializer serializer = record.getRecordSerializer();
                 byte[] serializedMessage = serializer.serialize();
                 record.setCompleteRecordBytes(serializedMessage);
