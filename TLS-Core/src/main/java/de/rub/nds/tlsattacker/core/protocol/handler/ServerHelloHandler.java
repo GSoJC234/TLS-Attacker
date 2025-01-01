@@ -305,6 +305,7 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
             }
             byte[] handshakeSecret =
                     HKDFunction.extract(hkdfAlgorithm, saltHandshakeSecret, sharedSecret);
+            LOGGER.info("HandshakeSecret: " + Arrays.toString(handshakeSecret));
             tlsContext.setHandshakeSecret(handshakeSecret);
             LOGGER.debug("Set handshakeSecret in Context to {}", handshakeSecret);
             byte[] clientHandshakeTrafficSecret =
@@ -318,6 +319,9 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
             LOGGER.debug(
                     "Set clientHandshakeTrafficSecret in Context to {}",
                     clientHandshakeTrafficSecret);
+            LOGGER.info(
+                    "ClientHandshakeTrafficSecret: "
+                            + Arrays.toString(clientHandshakeTrafficSecret));
             byte[] serverHandshakeTrafficSecret =
                     HKDFunction.deriveSecret(
                             hkdfAlgorithm,
@@ -329,6 +333,9 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
             LOGGER.debug(
                     "Set serverHandshakeTrafficSecret in Context to {}",
                     serverHandshakeTrafficSecret);
+            LOGGER.info(
+                    "ServerHandshakeTrafficSecret: "
+                            + Arrays.toString(serverHandshakeTrafficSecret));
         } catch (CryptoException | NoSuchAlgorithmException ex) {
             throw new AdjustmentException(ex);
         }

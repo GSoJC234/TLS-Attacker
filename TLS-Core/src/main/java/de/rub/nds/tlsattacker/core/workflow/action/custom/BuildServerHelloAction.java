@@ -133,6 +133,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         ServerHelloHandler handler = message.getHandler(state.getTlsContext(getConnectionAlias()));
         handler.adjustContext(message);
+        handler.adjustContextAfterSerialize(message);
         message.setAdjustContext(false);
 
         container.add(message);

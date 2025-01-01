@@ -12,10 +12,8 @@ import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.layer.impl.RecordLayer;
 import de.rub.nds.tlsattacker.core.record.Record;
-import de.rub.nds.tlsattacker.core.record.cipher.RecordCipher;
-import de.rub.nds.tlsattacker.core.record.cipher.RecordCipherFactory;
 import de.rub.nds.tlsattacker.core.record.cipher.cryptohelper.KeySet;
-import de.rub.nds.tlsattacker.core.record.crypto.RecordEncryptor;
+import de.rub.nds.tlsattacker.core.record.crypto.Encryptor;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -56,10 +54,8 @@ public class EncryptAction extends ConnectionBoundAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         Record record = record_container.get(0);
-        KeySet keyset = keySet_container.get(0);
         TlsContext context = state.getTlsContext(getConnectionAlias());
 
-        record.prepareComputations();
         RecordLayer recordLayer = context.getRecordLayer();
         byte[] connectionId =
                 recordLayer
@@ -70,13 +66,11 @@ public class EncryptAction extends ConnectionBoundAction {
         if (connectionId != null) {
             record.setConnectionId(connectionId);
         }
+        record.prepareComputations();
 
-        RecordCipher cipher = RecordCipherFactory.getRecordCipher(context, keyset, true);
-        RecordEncryptor encryptor = new RecordEncryptor(cipher, context);
+        Encryptor encryptor =
+                state.getTlsContext(getConnectionAlias()).getRecordLayer().getEncryptor();
         encryptor.encrypt(record);
-
-        byte[] recordBytes = record.getRecordSerializer().serialize();
-        record.setCompleteRecordBytes(recordBytes);
         setExecuted(true);
     }
 
