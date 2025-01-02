@@ -12,26 +12,41 @@ import de.rub.nds.tlsattacker.core.constants.ECPointFormat;
 import de.rub.nds.tlsattacker.core.constants.NamedGroup;
 import de.rub.nds.tlsattacker.core.crypto.KeyShareCalculator;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
+import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.state.State;
-import de.rub.nds.tlsattacker.core.workflow.action.TlsAction;
+import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
+import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
-import java.math.BigInteger;
 import java.util.List;
+import java.util.Set;
 
 @XmlRootElement(name = "BuildKeyShareEntry")
-public class BuildKeyShareEntryAction extends TlsAction {
+public class BuildKeyShareEntryAction extends ConnectionBoundAction {
 
     @XmlTransient private List<KeyShareEntry> keyshare_container;
     @XmlTransient private List<NamedGroup> namedGroup_container;
-    @XmlTransient private List<byte[]> privateKey_container;
 
     public BuildKeyShareEntryAction() {
         super();
     }
 
-    public BuildKeyShareEntryAction(List<KeyShareEntry> keyshare_container) {
+    public BuildKeyShareEntryAction(String alias) {
+        super(alias);
+    }
+
+    public BuildKeyShareEntryAction(Set<ActionOption> actionOptions, String alias) {
+        super(actionOptions, alias);
+        this.connectionAlias = alias;
+    }
+
+    public BuildKeyShareEntryAction(Set<ActionOption> actionOptions) {
+        super(actionOptions);
+    }
+
+    public BuildKeyShareEntryAction(String alias, List<KeyShareEntry> keyshare_container) {
+        super(alias);
         this.keyshare_container = keyshare_container;
     }
 
@@ -39,20 +54,17 @@ public class BuildKeyShareEntryAction extends TlsAction {
         this.namedGroup_container = namedGroup_container;
     }
 
-    public void setPrivateKey(List<byte[]> privateKey_container) {
-        this.privateKey_container = privateKey_container;
-    }
-
     @Override
     public void execute(State state) throws ActionExecutionException {
-        byte[] privateKey = privateKey_container.get(0);
         NamedGroup namedGroup = namedGroup_container.get(0);
-
+        TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
         KeyShareEntry entry = new KeyShareEntry();
         entry.setGroup(namedGroup.getValue());
         byte[] publicKey =
                 KeyShareCalculator.createPublicKey(
-                        namedGroup, new BigInteger(privateKey), ECPointFormat.UNCOMPRESSED);
+                        namedGroup,
+                        tlsContext.getConfig().getDefaultKeySharePrivateKey(namedGroup),
+                        ECPointFormat.UNCOMPRESSED);
         entry.setPublicKey(publicKey);
         entry.setPublicKeyLength(publicKey.length);
 

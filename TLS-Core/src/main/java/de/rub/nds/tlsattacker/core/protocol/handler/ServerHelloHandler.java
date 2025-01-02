@@ -277,6 +277,7 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                             ? tlsContext.getChooser().getPsk()
                             : new byte[macLength]; // use PSK if available
             byte[] earlySecret = HKDFunction.extract(hkdfAlgorithm, new byte[0], psk);
+            LOGGER.info("earlySecret: " + Arrays.toString(earlySecret));
             byte[] saltHandshakeSecret =
                     HKDFunction.deriveSecret(
                             hkdfAlgorithm,
@@ -284,11 +285,13 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                             earlySecret,
                             HKDFunction.DERIVED,
                             new byte[0]);
+            LOGGER.info("saltHandshakeSecret: " + Arrays.toString(saltHandshakeSecret));
             byte[] sharedSecret;
             BigInteger privateKey =
                     tlsContext
                             .getConfig()
                             .getDefaultKeySharePrivateKey(keyShareStoreEntry.getGroup());
+            LOGGER.info("privateKey: " + privateKey);
             if (tlsContext.getChooser().getSelectedCipherSuite().isPWD()) {
                 sharedSecret = computeSharedPWDSecret(keyShareStoreEntry);
             } else {
@@ -299,10 +302,11 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                                 keyShareStoreEntry.getPublicKey());
                 // This is a workaround for Tls1.3 InvalidCurve attacks
                 if (tlsContext.getConfig().getDefaultPreMasterSecret().length > 0) {
-                    LOGGER.debug("Using specified PMS instead of computed PMS");
+                    LOGGER.info("Using specified PMS instead of computed PMS");
                     sharedSecret = tlsContext.getConfig().getDefaultPreMasterSecret();
                 }
             }
+            LOGGER.info("sharedSecret: " + Arrays.toString(sharedSecret));
             byte[] handshakeSecret =
                     HKDFunction.extract(hkdfAlgorithm, saltHandshakeSecret, sharedSecret);
             LOGGER.info("HandshakeSecret: " + Arrays.toString(handshakeSecret));
