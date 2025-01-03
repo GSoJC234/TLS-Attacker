@@ -108,7 +108,7 @@ public class MessageLayer extends ProtocolLayer<LayerProcessingHint, ProtocolMes
             message.setCompleteResultingMessage(serializedMessage);
         }
         ProtocolMessageHandler handler = message.getHandler(context);
-        handler.updateDigest(message, true);
+        // handler.updateDigest(message, true);
         if (message.getAdjustContext()) {
             handler.adjustContext(message);
         }

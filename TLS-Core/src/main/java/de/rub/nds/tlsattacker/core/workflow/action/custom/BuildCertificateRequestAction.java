@@ -108,6 +108,8 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         CertificateRequestHandler handler =
                 new CertificateRequestHandler(state.getTlsContext(getConnectionAlias()));
+        handler.updateDigest(message, true);
+
         handler.adjustContext(message);
         message.setAdjustContext(false);
 

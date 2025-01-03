@@ -90,6 +90,8 @@ public class BuildEncryptedExtensionAction extends ConnectionBoundAction {
         context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         EncryptedExtensionsHandler handler =
                 new EncryptedExtensionsHandler(state.getTlsContext(getConnectionAlias()));
+        handler.updateDigest(message, true);
+
         handler.adjustContext(message);
         message.setAdjustContext(false);
 

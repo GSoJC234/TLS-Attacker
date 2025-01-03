@@ -107,6 +107,8 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
     public void execute(State state) throws ActionExecutionException {
         ServerHelloMessage message = new ServerHelloMessage();
         message.setShouldPrepareDefault(false);
+        message.getProtocolMessageType();
+
         message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
         message.setProtocolVersion(version_container.get(0).getValue());
         message.setSelectedCipherSuite(suite_container.get(0).getByteValue());
@@ -131,9 +133,12 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
 
         Context context = state.getContext(getConnectionAlias());
         context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
+
         ServerHelloHandler handler = message.getHandler(state.getTlsContext(getConnectionAlias()));
+        handler.updateDigest(message, true);
         handler.adjustContext(message);
         handler.adjustContextAfterSerialize(message);
+
         message.setAdjustContext(false);
 
         container.add(message);

@@ -312,6 +312,7 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
             LOGGER.info("HandshakeSecret: " + Arrays.toString(handshakeSecret));
             tlsContext.setHandshakeSecret(handshakeSecret);
             LOGGER.debug("Set handshakeSecret in Context to {}", handshakeSecret);
+            LOGGER.info("digest: " + Arrays.toString(tlsContext.getDigest().getRawBytes()));
             byte[] clientHandshakeTrafficSecret =
                     HKDFunction.deriveSecret(
                             hkdfAlgorithm,

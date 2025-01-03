@@ -96,6 +96,8 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
         CertificateVerifyHandler handler =
                 new CertificateVerifyHandler(state.getTlsContext(getConnectionAlias()));
+        handler.updateDigest(message, true);
+
         handler.adjustContext(message);
         message.setAdjustContext(false);
 

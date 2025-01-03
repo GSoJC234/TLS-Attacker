@@ -83,7 +83,9 @@ public class BuildFinishedAction extends ConnectionBoundAction {
 
         Context context = state.getContext(getConnectionAlias());
         context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
+
         FinishedHandler handler = new FinishedHandler(state.getTlsContext(getConnectionAlias()));
+        handler.updateDigest(message, true);
         handler.adjustContext(message);
         message.setAdjustContext(false);
 
