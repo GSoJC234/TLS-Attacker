@@ -8,8 +8,11 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
-import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
+import de.rub.nds.tlsattacker.core.constants.*;
+import de.rub.nds.tlsattacker.core.crypto.HKDFunction;
+import de.rub.nds.tlsattacker.core.crypto.PseudoRandomFunction;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
+import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.handler.FinishedHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
@@ -18,10 +21,16 @@ import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
+import de.rub.nds.tlsattacker.core.workflow.chooser.Chooser;
+import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Set;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 @XmlRootElement(name = "BuildFinishedAction")
 public class BuildFinishedAction extends ConnectionBoundAction {
@@ -71,7 +80,15 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         FinishedMessage message = new FinishedMessage();
         message.setShouldPrepareDefault(false);
         message.setType(message_type_container.get(0).getValue());
-        message.setVerifyData(verify_data_container.get(0));
+        if (verify_data_container != null) {
+            message.setVerifyData(verify_data_container.get(0));
+        } else {
+            try {
+                message.setVerifyData(computeVerifyData(state));
+            } catch (CryptoException e) {
+                throw new ActionExecutionException("Could not compute verify data.", e);
+            }
+        }
 
         FinishedSerializer serializer = new FinishedSerializer(message);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
@@ -101,5 +118,77 @@ public class BuildFinishedAction extends ConnectionBoundAction {
     @Override
     public boolean executedAsPlanned() {
         return true;
+    }
+
+    private byte[] computeVerifyData(State state) throws CryptoException {
+        Chooser chooser = state.getTlsContext(getConnectionAlias()).getChooser();
+        if (chooser.getSelectedProtocolVersion().isTLS13()) {
+            try {
+                HKDFAlgorithm hkdfAlgorithm =
+                        AlgorithmResolver.getHKDFAlgorithm(chooser.getSelectedCipherSuite());
+                String javaMacName = hkdfAlgorithm.getMacAlgorithm().getJavaName();
+                int macLength = Mac.getInstance(javaMacName).getMacLength();
+                LOGGER.debug("Connection End: " + chooser.getTalkingConnectionEnd());
+                byte[] trafficSecret;
+                if (chooser.getTalkingConnectionEnd() == ConnectionEndType.SERVER) {
+                    trafficSecret = chooser.getServerHandshakeTrafficSecret();
+                } else {
+                    trafficSecret = chooser.getClientHandshakeTrafficSecret();
+                }
+                byte[] finishedKey =
+                        HKDFunction.expandLabel(
+                                hkdfAlgorithm,
+                                trafficSecret,
+                                HKDFunction.FINISHED,
+                                new byte[0],
+                                macLength);
+                LOGGER.debug("Finished key: {}", finishedKey);
+                SecretKeySpec keySpec = new SecretKeySpec(finishedKey, javaMacName);
+                byte[] result;
+                Mac mac = Mac.getInstance(javaMacName);
+                mac.init(keySpec);
+                mac.update(
+                        chooser.getContext()
+                                .getTlsContext()
+                                .getDigest()
+                                .digest(
+                                        chooser.getSelectedProtocolVersion(),
+                                        chooser.getSelectedCipherSuite()));
+                result = mac.doFinal();
+                return result;
+            } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
+                throw new CryptoException(ex);
+            }
+        } else {
+            LOGGER.debug("Calculating VerifyData:");
+            PRFAlgorithm prfAlgorithm = chooser.getPRFAlgorithm();
+            LOGGER.debug("Using PRF:" + prfAlgorithm.name());
+            byte[] masterSecret = chooser.getMasterSecret();
+            LOGGER.debug("Using MasterSecret: {}", masterSecret);
+            byte[] handshakeMessageHash =
+                    chooser.getContext()
+                            .getTlsContext()
+                            .getDigest()
+                            .digest(
+                                    chooser.getSelectedProtocolVersion(),
+                                    chooser.getSelectedCipherSuite());
+            LOGGER.debug("Using HandshakeMessage Hash: {}", handshakeMessageHash);
+
+            String label;
+            if (chooser.getTalkingConnectionEnd() == ConnectionEndType.SERVER) {
+                // TODO put this in separate config option
+                label = PseudoRandomFunction.SERVER_FINISHED_LABEL;
+            } else {
+                label = PseudoRandomFunction.CLIENT_FINISHED_LABEL;
+            }
+            byte[] res =
+                    PseudoRandomFunction.compute(
+                            prfAlgorithm,
+                            masterSecret,
+                            label,
+                            handshakeMessageHash,
+                            HandshakeByteLength.VERIFY_DATA);
+            return res;
+        }
     }
 }
