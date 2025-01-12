@@ -16,7 +16,6 @@ import de.rub.nds.tlsattacker.core.crypto.TlsSignatureUtil;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.CertificateVerifyHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.CertificateVerifyMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateVerifySerializer;
 import de.rub.nds.tlsattacker.core.state.Context;
@@ -121,14 +120,6 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
             throw new ActionExecutionException("Unsupported modified message length");
         }
         message.setCompleteResultingMessage(serializer.serialize());
-
-        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
-        CertificateVerifyHandler handler =
-                new CertificateVerifyHandler(state.getTlsContext(getConnectionAlias()));
-        handler.updateDigest(message, true);
-
-        handler.adjustContext(message);
-        message.setAdjustContext(false);
 
         container.add(message);
         setExecuted(true);

@@ -14,10 +14,8 @@ import de.rub.nds.tlsattacker.core.crypto.PseudoRandomFunction;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.FinishedHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.FinishedSerializer;
-import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -97,14 +95,6 @@ public class BuildFinishedAction extends ConnectionBoundAction {
             throw new ActionExecutionException("Unsupported modified message length");
         }
         message.setCompleteResultingMessage(serializer.serialize());
-
-        Context context = state.getContext(getConnectionAlias());
-        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
-
-        FinishedHandler handler = new FinishedHandler(state.getTlsContext(getConnectionAlias()));
-        handler.updateDigest(message, true);
-        handler.adjustContext(message);
-        message.setAdjustContext(false);
 
         container.add(message);
         setExecuted(true);

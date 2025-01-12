@@ -12,7 +12,6 @@ import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.CertificateMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.CertificateMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.cert.CertificateEntry;
 import de.rub.nds.tlsattacker.core.protocol.preparator.cert.CertificateEntryPreparator;
@@ -137,14 +136,6 @@ public class BuildCertificateAction extends ConnectionBoundAction {
             throw new ActionExecutionException("Unsupported message length modification");
         }
         message.setCompleteResultingMessage(serializer.serialize());
-
-        context.setTalkingConnectionEndType(context.getConnection().getLocalConnectionEndType());
-        CertificateMessageHandler handler =
-                new CertificateMessageHandler(state.getTlsContext(getConnectionAlias()));
-        handler.updateDigest(message, true);
-
-        handler.adjustContext(message);
-        message.setAdjustContext(false);
 
         container.add(message);
         setExecuted(true);
