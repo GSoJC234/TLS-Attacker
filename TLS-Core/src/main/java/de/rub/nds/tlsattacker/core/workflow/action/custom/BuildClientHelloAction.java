@@ -8,13 +8,14 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
-import de.rub.nds.tlsattacker.core.constants.*;
+import de.rub.nds.tlsattacker.core.constants.CipherSuite;
+import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
+import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
+import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.extension.*;
-import de.rub.nds.tlsattacker.core.protocol.serializer.ServerHelloSerializer;
-import de.rub.nds.tlsattacker.core.protocol.serializer.extension.*;
+import de.rub.nds.tlsattacker.core.protocol.message.ClientHelloMessage;
+import de.rub.nds.tlsattacker.core.protocol.serializer.ClientHelloSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -23,8 +24,8 @@ import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 import java.util.Set;
 
-@XmlRootElement(name = "BuildServerHelloAction")
-public class BuildServerHelloAction extends ConnectionBoundAction {
+@XmlRootElement(name = "BuildClientHelloAction")
+public class BuildClientHelloAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
 
@@ -37,24 +38,24 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<Boolean> session_id_length_container = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
 
-    public BuildServerHelloAction() {
+    public BuildClientHelloAction() {
         super();
     }
 
-    public BuildServerHelloAction(String alias) {
+    public BuildClientHelloAction(String alias) {
         super(alias);
     }
 
-    public BuildServerHelloAction(Set<ActionOption> actionOptions, String alias) {
+    public BuildClientHelloAction(Set<ActionOption> actionOptions, String alias) {
         super(actionOptions, alias);
         this.connectionAlias = alias;
     }
 
-    public BuildServerHelloAction(Set<ActionOption> actionOptions) {
+    public BuildClientHelloAction(Set<ActionOption> actionOptions) {
         super(actionOptions);
     }
 
-    public BuildServerHelloAction(String alias, List<ProtocolMessage> container) {
+    public BuildClientHelloAction(String alias, List<ProtocolMessage> container) {
         super(alias);
         this.container = container;
     }
@@ -93,20 +94,23 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        ServerHelloMessage message = new ServerHelloMessage();
+        ClientHelloMessage message = new ClientHelloMessage();
         message.setShouldPrepareDefault(false);
 
         message.setType(message_type_container.get(0).getValue());
         message.setProtocolVersion(version_container.get(0).getValue());
-        message.setSelectedCipherSuite(suite_container.get(0).getByteValue());
+        message.setCipherSuites(suite_container.get(0).getByteValue());
+        message.setCipherSuiteLength(suite_container.get(0).getByteValue().length);
         message.setRandom(random_container.get(0));
         message.setSessionId(session_id_container.get(0));
         if (session_id_length_container.get(0)) {
             message.setSessionIdLength(session_id_container.get(0).length);
         }
-        message.setSelectedCompressionMethod(compression_container.get(0).getValue());
+        message.setCompressions(compression_container.get(0).getArrayValue());
+        message.setCompressionLength(compression_container.get(0).getArrayValue().length);
 
-        ServerHelloSerializer serializer = new ServerHelloSerializer(message);
+        ClientHelloSerializer serializer =
+                new ClientHelloSerializer(message, ProtocolVersion.TLS13);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         if (!message_length_container.get(0)) {

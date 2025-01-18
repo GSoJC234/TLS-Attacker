@@ -16,6 +16,7 @@ import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.FinishedSerializer;
+import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -25,6 +26,7 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import javax.crypto.Mac;
@@ -82,6 +84,9 @@ public class BuildFinishedAction extends ConnectionBoundAction {
             message.setVerifyData(verify_data_container.get(0));
         } else {
             try {
+                Context context = state.getContext(getConnectionAlias());
+                context.setTalkingConnectionEndType(
+                        context.getConnection().getLocalConnectionEndType());
                 message.setVerifyData(computeVerifyData(state));
             } catch (CryptoException e) {
                 throw new ActionExecutionException("Could not compute verify data.", e);
@@ -132,7 +137,7 @@ public class BuildFinishedAction extends ConnectionBoundAction {
                                 HKDFunction.FINISHED,
                                 new byte[0],
                                 macLength);
-                LOGGER.debug("Finished key: {}", finishedKey);
+                LOGGER.info("Finished key: {}", Arrays.toString(finishedKey));
                 SecretKeySpec keySpec = new SecretKeySpec(finishedKey, javaMacName);
                 byte[] result;
                 Mac mac = Mac.getInstance(javaMacName);

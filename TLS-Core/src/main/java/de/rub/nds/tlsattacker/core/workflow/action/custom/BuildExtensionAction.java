@@ -66,8 +66,9 @@ public class BuildExtensionAction extends ConnectionBoundAction {
     public void execute(State state) throws ActionExecutionException {
         HandshakeMessage message = (HandshakeMessage) container.get(0);
         container.remove(0); // update message
-
-        List<ExtensionMessage> extensionMessageList = generateExtensionMessages();
+        ConnectionEndType endType =
+                state.getContext(getConnectionAlias()).getConnection().getLocalConnectionEndType();
+        List<ExtensionMessage> extensionMessageList = generateExtensionMessages(endType);
         message.setExtensions(extensionMessageList);
         message.setExtensionBytes(extensionMessageBytes(extensionMessageList));
         message.setExtensionsLength(message.getExtensionBytes().getValue().length);
@@ -94,7 +95,7 @@ public class BuildExtensionAction extends ConnectionBoundAction {
         return baos.toByteArray();
     }
 
-    private List<ExtensionMessage> generateExtensionMessages() {
+    private List<ExtensionMessage> generateExtensionMessages(ConnectionEndType endType) {
         List<ExtensionMessage> messageList = new ArrayList<ExtensionMessage>();
 
         for (List<?> extension : extension_container) {
@@ -102,6 +103,10 @@ public class BuildExtensionAction extends ConnectionBoundAction {
             if (element instanceof ProtocolVersion) {
                 SupportedVersionsExtensionMessage message = new SupportedVersionsExtensionMessage();
                 message.setSupportedVersions(((ProtocolVersion) element).getValue());
+                if (endType == ConnectionEndType.CLIENT) {
+                    message.setSupportedVersionsLength(
+                            message.getSupportedVersions().getValue().length);
+                }
                 message.setExtensionType(ExtensionType.SUPPORTED_VERSIONS.getValue());
 
                 SupportedVersionsExtensionSerializer serializer =
@@ -120,11 +125,12 @@ public class BuildExtensionAction extends ConnectionBoundAction {
                 List<KeyShareEntry> entryList = new ArrayList<>();
                 entryList.add((KeyShareEntry) element);
                 message.setKeyShareList(entryList);
-                message.setKeyShareListLength(entryList.size());
-
+                // message.setKeyShareListLength(entryList.size());
                 message.setKeyShareListBytes(serializer.serialize());
+                message.setKeyShareListLength(message.getKeyShareListBytes().getValue().length);
+
                 KeyShareExtensionSerializer serializer2 =
-                        new KeyShareExtensionSerializer(message, ConnectionEndType.SERVER);
+                        new KeyShareExtensionSerializer(message, endType);
                 message.setExtensionContent(serializer2.serializeExtensionContent());
                 message.setExtensionLength(message.getExtensionContent().getValue().length);
                 message.setExtensionBytes(serializer2.serialize());
@@ -141,6 +147,8 @@ public class BuildExtensionAction extends ConnectionBoundAction {
                 message.setExtensionContent(serializer.serializeExtensionContent());
                 message.setExtensionLength(message.getExtensionContent().getValue().length);
                 message.setExtensionBytes(serializer.serialize());
+
+                messageList.add(message);
             } else if (element instanceof SignatureAndHashAlgorithm) {
                 SignatureAndHashAlgorithmsExtensionMessage message =
                         new SignatureAndHashAlgorithmsExtensionMessage();
@@ -155,6 +163,8 @@ public class BuildExtensionAction extends ConnectionBoundAction {
                 message.setExtensionContent(serializer.serializeExtensionContent());
                 message.setExtensionLength(message.getExtensionContent().getValue().length);
                 message.setExtensionBytes(serializer.serialize());
+
+                messageList.add(message);
             }
         }
 
