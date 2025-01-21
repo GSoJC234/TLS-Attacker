@@ -31,7 +31,6 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessageType> record_type_container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
-    @XmlTransient private List<Boolean> length_container = null;
     @XmlTransient private List<ProtocolMessage> message_container = null;
 
     public BuildRecordAction() {}
@@ -46,10 +45,6 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
     public void setProtocolVersion(List<ProtocolVersion> version_container) {
         this.version_container = version_container;
-    }
-
-    public void setLength(List<Boolean> length_container) {
-        this.length_container = length_container;
     }
 
     public void setProtocolMessage(List<ProtocolMessage> message_container) {
@@ -86,10 +81,6 @@ public class BuildRecordAction extends ConnectionBoundAction {
             record.setProtocolMessageBytes(message.getCompleteResultingMessage());
             record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
             record.setLength(record.getProtocolMessageBytes().getValue().length);
-        }
-
-        if (!length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported message length modification");
         }
 
         RecordSerializer serializer = new RecordSerializer(record);

@@ -36,9 +36,6 @@ import javax.crypto.spec.SecretKeySpec;
 public class BuildFinishedAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
-
-    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
-    @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<byte[]> verify_data_container = null;
 
     public BuildFinishedAction() {
@@ -63,14 +60,6 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         this.container = container;
     }
 
-    public void setHandshakeMessageType(List<HandshakeMessageType> message_type_container) {
-        this.message_type_container = message_type_container;
-    }
-
-    public void setMessageLength(List<Boolean> message_length_container) {
-        this.message_length_container = message_length_container;
-    }
-
     public void setVerifyData(List<byte[]> verify_data_container) {
         this.verify_data_container = verify_data_container;
     }
@@ -79,7 +68,7 @@ public class BuildFinishedAction extends ConnectionBoundAction {
     public void execute(State state) throws ActionExecutionException {
         FinishedMessage message = new FinishedMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(message_type_container.get(0).getValue());
+        message.setType(HandshakeMessageType.FINISHED.getValue());
         if (verify_data_container != null) {
             message.setVerifyData(verify_data_container.get(0));
         } else {
@@ -96,9 +85,6 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         FinishedSerializer serializer = new FinishedSerializer(message);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
-        if (!message_length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported modified message length");
-        }
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);

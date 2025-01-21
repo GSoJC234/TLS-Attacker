@@ -33,11 +33,8 @@ import java.util.Set;
 public class BuildCertificateAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
-    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
-    @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<CertificateEntry> entry_container = null;
     @XmlTransient private List<byte[]> certificate_request_container = null;
-    @XmlTransient private List<Boolean> certificate_request_length_container = null;
 
     public BuildCertificateAction() {
         super();
@@ -61,14 +58,6 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         this.container = container;
     }
 
-    public void setHandshakeMessageType(List<HandshakeMessageType> message_type_container) {
-        this.message_type_container = message_type_container;
-    }
-
-    public void setMessageLength(List<Boolean> message_length_container) {
-        this.message_length_container = message_length_container;
-    }
-
     public void setCertificate(List<CertificateEntry> entry_container) {
         this.entry_container = entry_container;
     }
@@ -77,17 +66,12 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         this.certificate_request_container = certificate_request_context;
     }
 
-    public void setCertificateRequestContextLen(List<Boolean> certificate_request_context_len) {
-        this.certificate_request_length_container = certificate_request_context_len;
-    }
-
     @Override
     public void execute(State state) throws ActionExecutionException {
         Context context = state.getContext(getConnectionAlias());
 
         CertificateMessage message = new CertificateMessage();
         message.setShouldPrepareDefault(false);
-
         message.setType(HandshakeMessageType.CERTIFICATE.getValue());
 
         // For changing certificates later
@@ -132,9 +116,6 @@ public class BuildCertificateAction extends ConnectionBoundAction {
                         message, context.getTlsContext().getSelectedProtocolVersion());
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
-        if (!message_length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported message length modification");
-        }
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);

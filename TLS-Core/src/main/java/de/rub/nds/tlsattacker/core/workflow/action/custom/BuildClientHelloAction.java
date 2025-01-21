@@ -21,22 +21,22 @@ import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
 @XmlRootElement(name = "BuildClientHelloAction")
 public class BuildClientHelloAction extends ConnectionBoundAction {
 
-    @XmlTransient private List<ProtocolMessage> container = null;
-
-    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
-    @XmlTransient private List<Boolean> message_length_container = null;
+    @XmlTransient protected List<ProtocolMessage> container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
     @XmlTransient private List<CipherSuite> suite_container = null;
     @XmlTransient private List<byte[]> random_container = null;
     @XmlTransient private List<byte[]> session_id_container = null;
-    @XmlTransient private List<Boolean> session_id_length_container = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
+
+    private static final int RANDOM_LENGTH_FALLBACK = 4393139;
 
     public BuildClientHelloAction() {
         super();
@@ -60,19 +60,11 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         this.container = container;
     }
 
-    public void setHandshakeMessageType(List<HandshakeMessageType> message_type_container) {
-        this.message_type_container = message_type_container;
-    }
-
-    public void setMessageLength(List<Boolean> message_length_container) {
-        this.message_length_container = message_length_container;
-    }
-
     public void setVersion(List<ProtocolVersion> version_container) {
         this.version_container = version_container;
     }
 
-    public void setCipherSuite(List<CipherSuite> suite_container) {
+    public void setCipherSuites(List<CipherSuite> suite_container) {
         this.suite_container = suite_container;
     }
 
@@ -84,11 +76,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         this.session_id_container = session_id_container;
     }
 
-    public void setSessionIdLength(List<Boolean> session_id_length_container) {
-        this.session_id_length_container = session_id_length_container;
-    }
-
-    public void setCompression(List<CompressionMethod> compression_container) {
+    public void setCompressions(List<CompressionMethod> compression_container) {
         this.compression_container = compression_container;
     }
 
@@ -97,29 +85,51 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         ClientHelloMessage message = new ClientHelloMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setType(message_type_container.get(0).getValue());
+        message.setType(HandshakeMessageType.CLIENT_HELLO.getValue());
+
         message.setProtocolVersion(version_container.get(0).getValue());
-        message.setCipherSuites(suite_container.get(0).getByteValue());
-        message.setCipherSuiteLength(suite_container.get(0).getByteValue().length);
+
+        message.setCipherSuites(serializeCipherSuites(suite_container));
+        message.setCipherSuiteLength(message.getCipherSuites().getValue().length);
+
         message.setRandom(random_container.get(0));
+
         message.setSessionId(session_id_container.get(0));
-        if (session_id_length_container.get(0)) {
-            message.setSessionIdLength(session_id_container.get(0).length);
-        }
-        message.setCompressions(compression_container.get(0).getArrayValue());
-        message.setCompressionLength(compression_container.get(0).getArrayValue().length);
+        message.setSessionIdLength(message.getSessionId().getValue().length);
+
+        message.setCompressions(serializeCompressionMethods(compression_container));
+        message.setCompressionLength(message.getCompressions().getValue().length);
 
         ClientHelloSerializer serializer =
                 new ClientHelloSerializer(message, ProtocolVersion.TLS13);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
-        if (!message_length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported modified message length");
-        }
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
         setExecuted(true);
+    }
+
+    private byte[] serializeCipherSuites(List<CipherSuite> suites) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            for (CipherSuite suite : suites) {
+                outputStream.write(suite.getByteValue());
+            }
+            return outputStream.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to serialize CipherSuites", e);
+        }
+    }
+
+    private byte[] serializeCompressionMethods(List<CompressionMethod> methods) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            for (CompressionMethod method : methods) {
+                outputStream.write(method.getArrayValue());
+            }
+            return outputStream.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to serialize CompressionMethods", e);
+        }
     }
 
     @Override

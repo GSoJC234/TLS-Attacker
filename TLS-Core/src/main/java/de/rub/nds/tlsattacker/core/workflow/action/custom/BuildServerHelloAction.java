@@ -28,13 +28,10 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
 
-    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
-    @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
     @XmlTransient private List<CipherSuite> suite_container = null;
     @XmlTransient private List<byte[]> random_container = null;
     @XmlTransient private List<byte[]> session_id_container = null;
-    @XmlTransient private List<Boolean> session_id_length_container = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
 
     public BuildServerHelloAction() {
@@ -59,14 +56,6 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         this.container = container;
     }
 
-    public void setHandshakeMessageType(List<HandshakeMessageType> message_type_container) {
-        this.message_type_container = message_type_container;
-    }
-
-    public void setMessageLength(List<Boolean> message_length_container) {
-        this.message_length_container = message_length_container;
-    }
-
     public void setVersion(List<ProtocolVersion> version_container) {
         this.version_container = version_container;
     }
@@ -83,10 +72,6 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         this.session_id_container = session_id_container;
     }
 
-    public void setSessionIdLength(List<Boolean> session_id_length_container) {
-        this.session_id_length_container = session_id_length_container;
-    }
-
     public void setCompression(List<CompressionMethod> compression_container) {
         this.compression_container = compression_container;
     }
@@ -96,22 +81,17 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         ServerHelloMessage message = new ServerHelloMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setType(message_type_container.get(0).getValue());
+        message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
         message.setProtocolVersion(version_container.get(0).getValue());
         message.setSelectedCipherSuite(suite_container.get(0).getByteValue());
         message.setRandom(random_container.get(0));
         message.setSessionId(session_id_container.get(0));
-        if (session_id_length_container.get(0)) {
-            message.setSessionIdLength(session_id_container.get(0).length);
-        }
+        message.setSessionIdLength(message.getSessionId().getValue().length);
         message.setSelectedCompressionMethod(compression_container.get(0).getValue());
 
         ServerHelloSerializer serializer = new ServerHelloSerializer(message);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
-        if (!message_length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported modified message length");
-        }
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);

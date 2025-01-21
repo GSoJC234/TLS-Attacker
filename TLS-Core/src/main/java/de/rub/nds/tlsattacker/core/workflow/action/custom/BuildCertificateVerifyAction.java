@@ -34,10 +34,7 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
 
-    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
-    @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<byte[]> signature_container = null;
-    @XmlTransient private List<Boolean> signature_length_container = null;
 
     @XmlTransient
     private List<SignatureAndHashAlgorithm> signature_and_hash_algorithm_container = null;
@@ -64,14 +61,6 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         this.container = container;
     }
 
-    public void setHandshakeMessageType(List<HandshakeMessageType> message_type_container) {
-        this.message_type_container = message_type_container;
-    }
-
-    public void setMessageLength(List<Boolean> message_length_container) {
-        this.message_length_container = message_length_container;
-    }
-
     public void setSignature_and_hash_algorithm_container(
             List<SignatureAndHashAlgorithm> signature_and_hash_algorithm_container) {
         this.signature_and_hash_algorithm_container = signature_and_hash_algorithm_container;
@@ -81,17 +70,13 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         this.signature_container = signature_container;
     }
 
-    public void setSignatureLength(List<Boolean> signature_length_container) {
-        this.signature_length_container = signature_length_container;
-    }
-
     @Override
     public void execute(State state) throws ActionExecutionException {
         Context context = state.getContext(getConnectionAlias());
 
         CertificateVerifyMessage message = new CertificateVerifyMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(message_type_container.get(0).getValue());
+        message.setType(HandshakeMessageType.CERTIFICATE_VERIFY.getValue());
 
         SignatureAndHashAlgorithm algorithm = signature_and_hash_algorithm_container.get(0);
         message.setSignatureHashAlgorithm(algorithm.getByteValue());
@@ -105,20 +90,13 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
                 throw new ActionExecutionException("Could not create signature", e);
             }
         }
-        if (signature_length_container != null) {
-            message.setSignatureLength(signature_container.get(0).length);
-        } else {
-            message.setSignatureLength(message.getSignature().getValue().length);
-        }
+        message.setSignatureLength(message.getSignature().getValue().length);
 
         CertificateVerifySerializer serializer =
                 new CertificateVerifySerializer(
                         message, context.getTlsContext().getSelectedProtocolVersion());
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
-        if (!message_length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported modified message length");
-        }
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);

@@ -28,10 +28,7 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
 
-    @XmlTransient private List<HandshakeMessageType> message_type_container = null;
-    @XmlTransient private List<Boolean> message_length_container = null;
     @XmlTransient private List<byte[]> certificate_request_container = null;
-    @XmlTransient private List<Boolean> certificate_request_length_container = null;
 
     public BuildCertificateRequestAction() {
         super();
@@ -55,20 +52,8 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         this.container = container;
     }
 
-    public void setHandshakeMessageType(List<HandshakeMessageType> message_type_container) {
-        this.message_type_container = message_type_container;
-    }
-
-    public void setMessageLength(List<Boolean> message_length_container) {
-        this.message_length_container = message_length_container;
-    }
-
     public void setCertificateRequestContext(List<byte[]> certificate_request_context) {
         this.certificate_request_container = certificate_request_context;
-    }
-
-    public void setCertificateRequestContextLen(List<Boolean> certificate_request_context_len) {
-        this.certificate_request_length_container = certificate_request_context_len;
     }
 
     @Override
@@ -77,11 +62,10 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
 
         CertificateRequestMessage message = new CertificateRequestMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(message_type_container.get(0).getValue());
+        message.setType(HandshakeMessageType.CERTIFICATE_REQUEST.getValue());
         message.setCertificateRequestContext(certificate_request_container.get(0));
-        if (certificate_request_length_container.get(0)) {
-            message.setCertificateRequestContextLength(certificate_request_container.get(0).length);
-        }
+        message.setCertificateRequestContextLength(
+                message.getCertificateRequestContext().getValue().length);
         message.setClientCertificateTypesCount(0);
 
         CertificateRequestSerializer serializer =
@@ -89,9 +73,6 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
                         message, context.getTlsContext().getSelectedProtocolVersion());
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
-        if (!message_length_container.get(0)) {
-            throw new ActionExecutionException("Unsupported modified message length");
-        }
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
