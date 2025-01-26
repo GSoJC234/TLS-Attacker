@@ -19,6 +19,7 @@ import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Set;
 
@@ -27,6 +28,7 @@ public class BuildKeyShareEntryAction extends ConnectionBoundAction {
 
     @XmlTransient private List<KeyShareEntry> keyshare_container;
     @XmlTransient private List<NamedGroup> namedGroup_container;
+    @XmlTransient private List<byte[]> private_key;
 
     public BuildKeyShareEntryAction() {
         super();
@@ -54,10 +56,18 @@ public class BuildKeyShareEntryAction extends ConnectionBoundAction {
         this.namedGroup_container = namedGroup_container;
     }
 
+    public void setPrivateKey(List<byte[]> private_key) {
+        this.private_key = private_key;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         NamedGroup namedGroup = namedGroup_container.get(0);
+        byte[] privateKey = private_key.get(0);
+
         TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
+        tlsContext.getConfig().setDefaultKeySharePrivateKey(namedGroup, new BigInteger(privateKey));
+
         KeyShareEntry entry = new KeyShareEntry();
         entry.setGroup(namedGroup.getValue());
         byte[] publicKey =
