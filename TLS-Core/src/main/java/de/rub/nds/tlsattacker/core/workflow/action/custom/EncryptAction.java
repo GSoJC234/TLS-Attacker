@@ -14,6 +14,7 @@ import de.rub.nds.tlsattacker.core.layer.impl.RecordLayer;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.cipher.cryptohelper.KeySet;
 import de.rub.nds.tlsattacker.core.record.crypto.Encryptor;
+import de.rub.nds.tlsattacker.core.record.serializer.RecordSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -71,6 +72,10 @@ public class EncryptAction extends ConnectionBoundAction {
         Encryptor encryptor =
                 state.getTlsContext(getConnectionAlias()).getRecordLayer().getEncryptor();
         encryptor.encrypt(record);
+
+        RecordSerializer serializer = new RecordSerializer(record);
+        record.setLength(record.getProtocolMessageBytes().getValue().length);
+        record.setCompleteRecordBytes(serializer.serialize());
         setExecuted(true);
     }
 
