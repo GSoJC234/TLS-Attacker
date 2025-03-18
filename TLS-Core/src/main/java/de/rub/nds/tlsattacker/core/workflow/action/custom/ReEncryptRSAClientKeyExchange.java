@@ -14,7 +14,6 @@ import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.RSAClientKeyExchangeHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.RSAClientKeyExchangeMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.RSAClientKeyExchangeSerializer;
 import de.rub.nds.tlsattacker.core.record.Record;
@@ -142,11 +141,11 @@ public class ReEncryptRSAClientKeyExchange extends ConnectionBoundAction {
                         state.getContext(getConnectionAlias())
                                 .getConnection()
                                 .getLocalConnectionEndType());
-        RSAClientKeyExchangeHandler handler =
-                message.getHandler(state.getTlsContext(getConnectionAlias()));
-        handler.adjustContext(message);
-        handler.adjustContextAfterSerialize(message);
-        message.setAdjustContext(false);
+        // RSAClientKeyExchangeHandler handler =
+        //        message.getHandler(state.getTlsContext(getConnectionAlias()));
+        // handler.adjustContext(message);
+        // handler.adjustContextAfterSerialize(message);
+        // message.setAdjustContext(false);
 
         Record record = record_container.get(0);
         record.setProtocolMessageBytes(message.getCompleteResultingMessage());

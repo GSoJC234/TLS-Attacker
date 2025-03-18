@@ -372,8 +372,8 @@ public class MessageLayer extends ProtocolLayer<LayerProcessingHint, ProtocolMes
                 handshakeMessage.setMessageSequence(
                         ((RecordLayerHint) handshakeStream.getHint()).getMessageSequence());
             }
-            handler.updateDigest(handshakeMessage, false);
-            handler.adjustContext(handshakeMessage);
+            // handler.updateDigest(handshakeMessage, false);
+            // handler.adjustContext(handshakeMessage);
             addProducedContainer(handshakeMessage);
         } catch (RuntimeException ex) {
             LOGGER.warn(

@@ -15,7 +15,6 @@ import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.HandshakeMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.FinishedSerializer;
 import de.rub.nds.tlsattacker.core.record.Record;
@@ -96,10 +95,10 @@ public class ChangeVerifyDataAction extends ConnectionBoundAction {
                         state.getContext(getConnectionAlias())
                                 .getConnection()
                                 .getLocalConnectionEndType());
-        HandshakeMessageHandler handler =
-                message.getHandler(state.getTlsContext(getConnectionAlias()));
-        handler.adjustContext(message);
-        message.setAdjustContext(false);
+        // HandshakeMessageHandler handler =
+        //        message.getHandler(state.getTlsContext(getConnectionAlias()));
+        // handler.adjustContext(message);
+        // message.setAdjustContext(false);
 
         Record record = record_container.get(0);
         record.setProtocolMessageBytes(message.getCompleteResultingMessage());

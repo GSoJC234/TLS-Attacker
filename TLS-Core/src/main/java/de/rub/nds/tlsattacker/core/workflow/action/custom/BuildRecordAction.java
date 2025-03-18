@@ -13,8 +13,6 @@ import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.HandshakeMessageHandler;
-import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.HandshakeMessage;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.serializer.RecordSerializer;
@@ -67,16 +65,16 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
             context.setTalkingConnectionEndType(
                     context.getConnection().getLocalConnectionEndType());
-            HandshakeMessageHandler handler =
-                    handshakeMessage.getHandler(state.getTlsContext(getConnectionAlias()));
-            handler.adjustContext(handshakeMessage);
-            if (!(handshakeMessage instanceof FinishedMessage)) {
-                // We do not consider after application data
-                // For processing application data, this code should be revised
-                handler.adjustContextAfterSerialize(handshakeMessage);
-            }
+            // HandshakeMessageHandler handler =
+            //        handshakeMessage.getHandler(state.getTlsContext(getConnectionAlias()));
+            // handler.adjustContext(handshakeMessage);
+            // if (!(handshakeMessage instanceof FinishedMessage)) {
+            //    // We do not consider after application data
+            //    // For processing application data, this code should be revised
+            //    handler.adjustContextAfterSerialize(handshakeMessage);
+            // }
 
-            message.setAdjustContext(false);
+            // message.setAdjustContext(false);
 
             record.setProtocolMessageBytes(message.getCompleteResultingMessage());
             record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());

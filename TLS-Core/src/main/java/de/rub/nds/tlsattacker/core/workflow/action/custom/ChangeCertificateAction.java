@@ -11,7 +11,6 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.CertificateMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.CertificateMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.cert.CertificateEntry;
 import de.rub.nds.tlsattacker.core.protocol.preparator.cert.CertificateEntryPreparator;
@@ -110,10 +109,10 @@ public class ChangeCertificateAction extends ConnectionBoundAction {
                             state.getContext(getConnectionAlias())
                                     .getConnection()
                                     .getLocalConnectionEndType());
-            CertificateMessageHandler handler =
-                    certificate_message.getHandler(state.getTlsContext(getConnectionAlias()));
-            handler.adjustContext(certificate_message);
-            handler.adjustContextAfterSerialize(certificate_message);
+            // CertificateMessageHandler handler =
+            //        certificate_message.getHandler(state.getTlsContext(getConnectionAlias()));
+            // handler.adjustContext(certificate_message);
+            // handler.adjustContextAfterSerialize(certificate_message);
 
             message.setAdjustContext(false);
 
