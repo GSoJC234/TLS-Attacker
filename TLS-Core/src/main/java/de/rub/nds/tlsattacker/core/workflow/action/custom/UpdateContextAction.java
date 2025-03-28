@@ -11,9 +11,8 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.handler.HandshakeMessageHandler;
+import de.rub.nds.tlsattacker.core.protocol.ProtocolMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.HandshakeMessage;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -53,9 +52,9 @@ public class UpdateContextAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        HandshakeMessage message = (HandshakeMessage) container.get(0);
+        ProtocolMessage message = container.get(0);
 
-        HandshakeMessageHandler handler =
+        ProtocolMessageHandler handler =
                 message.getHandler(state.getTlsContext(getConnectionAlias()));
         handler.updateDigest(message, true);
 

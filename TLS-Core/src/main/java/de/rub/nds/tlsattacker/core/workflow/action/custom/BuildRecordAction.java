@@ -76,10 +76,10 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
             // message.setAdjustContext(false);
 
-            record.setProtocolMessageBytes(message.getCompleteResultingMessage());
-            record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
-            record.setLength(record.getProtocolMessageBytes().getValue().length);
         }
+        record.setProtocolMessageBytes(message.getCompleteResultingMessage());
+        record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
+        record.setLength(record.getProtocolMessageBytes().getValue().length);
 
         RecordSerializer serializer = new RecordSerializer(record);
         record.setCompleteRecordBytes(serializer.serialize());

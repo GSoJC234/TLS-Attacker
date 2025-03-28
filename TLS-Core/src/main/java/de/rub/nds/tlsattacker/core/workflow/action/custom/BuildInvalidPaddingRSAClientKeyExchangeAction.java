@@ -1,3 +1,11 @@
+/*
+ * TLS-Attacker - A Modular Penetration Testing Framework for TLS
+ *
+ * Copyright 2014-2023 Ruhr University Bochum, Paderborn University, Technology Innovation Institute, and Hackmanit GmbH
+ *
+ * Licensed under Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0.txt
+ */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
@@ -16,7 +24,6 @@ import de.rub.nds.x509attacker.x509.model.publickey.PublicKeyContent;
 import de.rub.nds.x509attacker.x509.model.publickey.X509RsaPublicKey;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
-
 import java.math.BigInteger;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -26,8 +33,7 @@ import java.util.Set;
 @XmlRootElement(name = "BuildInvalidPaddingRSAClientKeyExchangeAction")
 public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBoundAction {
 
-    @XmlTransient
-    protected List<ProtocolMessage> container = null;
+    @XmlTransient protected List<ProtocolMessage> container = null;
     @XmlTransient private List<byte[]> clientRandom = null;
     @XmlTransient private List<byte[]> serverRandom = null;
     @XmlTransient private List<byte[]> nonce = null;
@@ -41,7 +47,8 @@ public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBou
         super(alias);
     }
 
-    public BuildInvalidPaddingRSAClientKeyExchangeAction(Set<ActionOption> actionOptions, String alias) {
+    public BuildInvalidPaddingRSAClientKeyExchangeAction(
+            Set<ActionOption> actionOptions, String alias) {
         super(actionOptions, alias);
         this.connectionAlias = alias;
     }
@@ -50,7 +57,8 @@ public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBou
         super(actionOptions);
     }
 
-    public BuildInvalidPaddingRSAClientKeyExchangeAction(String alias, List<ProtocolMessage> container) {
+    public BuildInvalidPaddingRSAClientKeyExchangeAction(
+            String alias, List<ProtocolMessage> container) {
         super(alias);
         this.container = container;
     }
@@ -78,11 +86,14 @@ public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBou
 
         message.setType(HandshakeMessageType.CLIENT_KEY_EXCHANGE.getValue());
         message.prepareComputations();
-        message.getComputations().setClientServerRandom(ArrayConverter.concatenate(clientRandom.get(0), serverRandom.get(0)));
+        message.getComputations()
+                .setClientServerRandom(
+                        ArrayConverter.concatenate(clientRandom.get(0), serverRandom.get(0)));
 
         X509RsaPublicKey publicKeyContent = (X509RsaPublicKey) publicKeyContainer.get(0);
         message.getComputations().setModulus(publicKeyContent.getModulus().getValue());
-        message.getComputations().setPublicExponent(publicKeyContent.getPublicExponent().getValue());
+        message.getComputations()
+                .setPublicExponent(publicKeyContent.getPublicExponent().getValue());
 
         BigInteger modulus = message.getComputations().getModulus().getValue();
 
@@ -129,21 +140,23 @@ public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBou
                         message.getComputations().getPublicExponent().getValue().abs(),
                         message.getComputations().getModulus().getValue().abs());
 
-        // TODO: compute invalid padding
+        // compute invalid padding
         // (c * s^e) mod N
-
-        BigInteger biEncrypted2 =
-                biPaddedPremasterSecret.modPow(
-                        message.getComputations().getPublicExponent().getValue().abs(),
-                        message.getComputations().getModulus().getValue().abs());
+        BigInteger attackValue = BigInteger.valueOf(65337);
+        BigInteger wrongEncrypted =
+                biEncrypted
+                        .multiply(attackValue)
+                        .modPow(
+                                message.getComputations().getPublicExponent().getValue().abs(),
+                                message.getComputations().getModulus().getValue().abs());
 
         byte[] encrypted =
-                ArrayConverter.bigIntegerToByteArray(biEncrypted, ceiledModulusByteLength, true);
+                ArrayConverter.bigIntegerToByteArray(wrongEncrypted, ceiledModulusByteLength, true);
         message.setPublicKey(encrypted);
         message.setPublicKeyLength(message.getPublicKey().getValue().length);
 
-
-        RSAClientKeyExchangeSerializer serializer = new RSAClientKeyExchangeSerializer(message, ProtocolVersion.TLS12);
+        RSAClientKeyExchangeSerializer serializer =
+                new RSAClientKeyExchangeSerializer(message, ProtocolVersion.TLS12);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         message.setCompleteResultingMessage(serializer.serialize());
@@ -167,7 +180,6 @@ public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBou
                 message.getComputations().getPremasterSecretProtocolVersion().getValue(),
                 tempPremasterSecret);
     }
-
 
     @Override
     public void reset() {
