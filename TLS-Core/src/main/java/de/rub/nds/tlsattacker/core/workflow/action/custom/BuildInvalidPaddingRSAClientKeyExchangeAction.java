@@ -149,7 +149,6 @@ public class BuildInvalidPaddingRSAClientKeyExchangeAction extends ConnectionBou
                         .modPow(
                                 message.getComputations().getPublicExponent().getValue().abs(),
                                 message.getComputations().getModulus().getValue().abs());
-
         byte[] encrypted =
                 ArrayConverter.bigIntegerToByteArray(wrongEncrypted, ceiledModulusByteLength, true);
         message.setPublicKey(encrypted);
