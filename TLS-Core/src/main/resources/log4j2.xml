@@ -19,7 +19,7 @@
 		<AppenderRef ref="Direct"/>	
 	</Logger>
         <Root level="INFO">
-            <AppenderRef ref="DEBUG"/>
+            <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
 </Configuration>

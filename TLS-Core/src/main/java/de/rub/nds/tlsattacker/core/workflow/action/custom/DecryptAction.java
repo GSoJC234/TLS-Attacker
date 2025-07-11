@@ -126,6 +126,6 @@ public class DecryptAction extends ConnectionBoundAction {
 
     @Override
     public boolean executedAsPlanned() {
-        return false;
+        return true;
     }
 }

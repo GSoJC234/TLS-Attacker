@@ -63,28 +63,29 @@ public class ReceiveOneAction extends CommonReceiveAction {
             throw new ActionExecutionException("Action already executed!");
         }
 
-        LOGGER.debug("Receiving... (" + this.getClass().getSimpleName() + ")");
+        LOGGER.info("Receiving... (" + this.getClass().getSimpleName() + ")");
         List<LayerConfiguration<?>> layerConfigurations = createLayerConfiguration(state);
         LayerStackProcessingResult result =
                 getReceiveResult(tlsContext.getLayerStack(), layerConfigurations);
         setExecuted(true);
-        LOGGER.debug(
-                "Receive Expected: {}", LogPrinter.toHumanReadableOneLine(layerConfigurations));
+        LOGGER.info("Receive Expected: " + LogPrinter.toHumanReadableOneLine(layerConfigurations));
 
         if (hasDefaultAlias()) {
             LOGGER.info(
-                    "Received Messages: {}",
-                    LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
+                    "Received Messages: "
+                            + LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
         } else {
             LOGGER.info(
-                    "Received Messages ({}): {}",
-                    getConnectionAlias(),
-                    LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
+                    "Received Messages ("
+                            + getConnectionAlias()
+                            + "): "
+                            + LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
         }
 
         for (ProtocolMessage message : getReceivedMessages()) {
             message.setShouldPrepareDefault(false);
             protocolMessages.add(message);
+            System.out.println("Received message: " + message);
         }
 
         for (Record record : getReceivedRecords()) {

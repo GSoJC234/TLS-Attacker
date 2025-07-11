@@ -6,10 +6,11 @@
  * Licensed under Apache License, Version 2.0
  * http://www.apache.org/licenses/LICENSE-2.0.txt
  */
-package de.rub.nds.tlsattacker.core.workflow.action;
+package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.state.State;
+import de.rub.nds.tlsattacker.core.workflow.action.TlsAction;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.Objects;
@@ -32,6 +33,22 @@ public class AssertEqualAction<T> extends TlsAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         comparisonResult = Objects.equals(value1.get(), value2.get());
+        if (!comparisonResult) {
+            System.out.println(
+                    "Assertion fails: "
+                            + "value1 -> "
+                            + value1.get()
+                            + ", value2 -> "
+                            + value2.get());
+            throw new ActionExecutionException(
+                    "Assertion fails: "
+                            + "value1 -> "
+                            + value1.get()
+                            + ", value2 -> "
+                            + value2.get());
+        }
+        System.out.println(
+                "Assertion pass: " + "value1 -> " + value1.get() + ", value2 -> " + value2.get());
         setExecuted(true);
     }
 

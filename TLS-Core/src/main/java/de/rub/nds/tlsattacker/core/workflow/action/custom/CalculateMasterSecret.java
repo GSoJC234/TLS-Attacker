@@ -77,6 +77,8 @@ public class CalculateMasterSecret extends TlsAction {
         client.setMasterSecret(masterSecret);
         LOGGER.info("Master Secret: " + Arrays.toString(masterSecret));
         container.add(masterSecret);
+
+        setExecuted(true);
     }
 
     private byte[] getMasterSecret(

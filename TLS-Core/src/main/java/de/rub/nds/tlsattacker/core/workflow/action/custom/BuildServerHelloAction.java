@@ -84,6 +84,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
         message.setProtocolVersion(version_container.get(0).getValue());
         message.setSelectedCipherSuite(suite_container.get(0).getByteValue());
+        message.setUnixTime(new byte[] {0x00, 0x00}); // dummy
         message.setRandom(random_container.get(0));
         message.setSessionId(session_id_container.get(0));
         message.setSessionIdLength(message.getSessionId().getValue().length);
@@ -95,6 +96,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("ServerHello: " + message);
         setExecuted(true);
     }
 

@@ -91,7 +91,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
 
         message.setCipherSuites(serializeCipherSuites(suite_container));
         message.setCipherSuiteLength(message.getCipherSuites().getValue().length);
-
+        message.setUnixTime(new byte[] {0x00, 0x00}); // dummy
         message.setRandom(random_container.get(0));
 
         message.setSessionId(session_id_container.get(0));
@@ -107,6 +107,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("ClientHello: " + message);
         setExecuted(true);
     }
 

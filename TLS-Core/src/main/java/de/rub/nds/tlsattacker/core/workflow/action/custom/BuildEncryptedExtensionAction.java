@@ -61,6 +61,7 @@ public class BuildEncryptedExtensionAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("EncryptedExtension: " + message);
         setExecuted(true);
     }
 

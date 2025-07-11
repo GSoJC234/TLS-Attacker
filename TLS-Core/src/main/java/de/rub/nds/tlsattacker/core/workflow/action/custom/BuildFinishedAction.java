@@ -88,6 +88,7 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("Finished: " + message);
         setExecuted(true);
     }
 

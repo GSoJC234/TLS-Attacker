@@ -8,10 +8,12 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
+import de.rub.nds.tlsattacker.core.constants.AlertDescription;
+import de.rub.nds.tlsattacker.core.constants.AlertLevel;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.ChangeCipherSpecMessage;
-import de.rub.nds.tlsattacker.core.protocol.serializer.ChangeCipherSpecSerializer;
+import de.rub.nds.tlsattacker.core.protocol.message.AlertMessage;
+import de.rub.nds.tlsattacker.core.protocol.serializer.AlertSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
@@ -20,45 +22,56 @@ import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
 import java.util.Set;
 
-@XmlRootElement(name = "BuildChangeCipherSpecAction")
-public class BuildChangeCipherSpecAction extends ConnectionBoundAction {
-
+@XmlRootElement(name = "BuildAlertAction")
+public class BuildAlertAction extends ConnectionBoundAction {
     @XmlTransient protected List<ProtocolMessage> container = null;
+    @XmlTransient private List<AlertLevel> alertLevel_container = null;
+    @XmlTransient private List<AlertDescription> alertDescription_container = null;
 
-    public BuildChangeCipherSpecAction() {
+    public BuildAlertAction() {
         super();
     }
 
-    public BuildChangeCipherSpecAction(String alias) {
+    public BuildAlertAction(String alias) {
         super(alias);
     }
 
-    public BuildChangeCipherSpecAction(Set<ActionOption> actionOptions, String alias) {
+    public BuildAlertAction(Set<ActionOption> actionOptions, String alias) {
         super(actionOptions, alias);
         this.connectionAlias = alias;
     }
 
-    public BuildChangeCipherSpecAction(Set<ActionOption> actionOptions) {
+    public BuildAlertAction(Set<ActionOption> actionOptions) {
         super(actionOptions);
     }
 
-    public BuildChangeCipherSpecAction(String alias, List<ProtocolMessage> container) {
+    public BuildAlertAction(String alias, List<ProtocolMessage> container) {
         super(alias);
         this.container = container;
     }
 
+    public void setAlertLevel(List<AlertLevel> alertLevel_container) {
+        this.alertLevel_container = alertLevel_container;
+    }
+
+    public void setAlertDescription(List<AlertDescription> alertDescription_container) {
+        this.alertDescription_container = alertDescription_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
-        ChangeCipherSpecMessage message = new ChangeCipherSpecMessage();
+        AlertMessage message = new AlertMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setCcsProtocolType(new byte[] {1});
+        message.setLevel(alertLevel_container.get(0).getValue());
+        message.setDescription(alertDescription_container.get(0).getValue());
+        message.setGoingToBeSent(true);
 
-        ChangeCipherSpecSerializer serializer = new ChangeCipherSpecSerializer(message);
+        AlertSerializer serializer = new AlertSerializer(message);
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
-        System.out.println("ChangeCipherSpec: " + message);
+        System.out.println("Alert: " + message);
         setExecuted(true);
     }
 

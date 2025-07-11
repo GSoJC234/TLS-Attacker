@@ -79,6 +79,7 @@ public class GetPreMasterSecretAction extends ConnectionBoundAction {
         tlsContext.setPreMasterSecret(preMasterSecret);
         LOGGER.info("PreMaster Secret: " + Arrays.toString(preMasterSecret));
         container.add(preMasterSecret);
+        setExecuted(true);
     }
 
     private byte[] getPreMasterSecret(RSAClientKeyExchangeMessage message, byte[] privateKeyPem) {

@@ -85,6 +85,7 @@ public class BuildRecordAction extends ConnectionBoundAction {
         record.setCompleteRecordBytes(serializer.serialize());
 
         record_container.add(record);
+        System.out.println("BuildRecord: " + message);
         setExecuted(true);
     }
 

@@ -100,6 +100,7 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("CertificateVerify: " + message);
         setExecuted(true);
     }
 

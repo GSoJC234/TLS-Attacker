@@ -76,6 +76,7 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("CertificateRequest: " + message);
         setExecuted(true);
     }
 

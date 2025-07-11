@@ -61,6 +61,7 @@ public class AddKeyShareAction extends AddExtensionAction<KeyShareEntry> {
         message.setExtensionLength(message.getExtensionContent().getValue().length);
         message.setExtensionBytes(serializer.serialize());
 
+        System.out.println("KeyShareExtension: " + message);
         return message;
     }
 

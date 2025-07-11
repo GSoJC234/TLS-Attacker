@@ -188,6 +188,6 @@ public class ChangeVerifyDataAction extends ConnectionBoundAction {
 
     @Override
     public boolean executedAsPlanned() {
-        return false;
+        return true;
     }
 }

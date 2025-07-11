@@ -119,6 +119,7 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
+        System.out.println("Certificate: " + message);
         setExecuted(true);
     }
 
@@ -129,6 +130,6 @@ public class BuildCertificateAction extends ConnectionBoundAction {
 
     @Override
     public boolean executedAsPlanned() {
-        return false;
+        return true;
     }
 }
