@@ -52,6 +52,10 @@ public class UpdateContextAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
+        if(container.isEmpty()){
+            setExecuted(true);
+            return;
+        }
         ProtocolMessage message = container.get(0);
 
         ProtocolMessageHandler handler =

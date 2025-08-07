@@ -82,22 +82,20 @@ public class ReceiveOneAction extends CommonReceiveAction {
                             + LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
         }
 
-        for (ProtocolMessage message : getReceivedMessages()) {
-            message.setShouldPrepareDefault(false);
-            protocolMessages.add(message);
-            System.out.println("Received message: " + message);
-        }
+        if(! getReceivedMessages().isEmpty()){
+            for (ProtocolMessage message : getReceivedMessages()) {
+                message.setShouldPrepareDefault(false);
+                protocolMessages.add(message);
+                System.out.println("Received message: " + message);
+            }
 
-        for (Record record : getReceivedRecords()) {
-            record.setShouldPrepare(false);
-            recordMessages.add(record);
+            for (Record record : getReceivedRecords()) {
+                record.setShouldPrepare(false);
+                recordMessages.add(record);
+            }
+        } else {
+            throw new ActionExecutionException("No messages were received.");
         }
-
-        // if (recordMessages.get(0).getContentMessageType() == ProtocolMessageType.HANDSHAKE
-        //        && protocolMessages.get(0) instanceof UnknownMessage) {
-        //    ((UnknownMessage) protocolMessages.get(0))
-        //            .setRecordContentMessageType(ProtocolMessageType.HANDSHAKE);
-        // }
     }
 
     @Override
