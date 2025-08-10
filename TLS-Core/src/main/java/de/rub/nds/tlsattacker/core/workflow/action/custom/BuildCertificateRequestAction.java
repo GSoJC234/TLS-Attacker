@@ -67,6 +67,8 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         message.setCertificateRequestContextLength(
                 message.getCertificateRequestContext().getValue().length);
         message.setClientCertificateTypesCount(0);
+        message.setExtensionsLength(0);
+        message.setExtensionBytes(new byte[]{});
 
         CertificateRequestSerializer serializer =
                 new CertificateRequestSerializer(
