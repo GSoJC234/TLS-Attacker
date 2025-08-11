@@ -396,6 +396,7 @@ public class WorkflowTrace implements Serializable {
                     && (action.getActionOptions() == null
                             || !action.getActionOptions().contains(ActionOption.MAY_FAIL))) {
                 LOGGER.debug("Action {} did not execute as planned", action.toCompactString());
+                System.out.println("Action " + action.toCompactString() + " did not execute as planned");
                 return false;
             } else {
                 LOGGER.debug("Action {} executed as planned", action.toCompactString());
