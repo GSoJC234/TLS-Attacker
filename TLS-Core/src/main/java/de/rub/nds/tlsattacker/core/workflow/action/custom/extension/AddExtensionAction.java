@@ -55,7 +55,7 @@ public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
         this.extension_container = extension_container;
     }
 
-    protected abstract ExtensionMessage generateExtensionMessages(ConnectionEndType endType);
+    protected abstract ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state);
 
     protected byte[] extensionMessageBytes(List<ExtensionMessage> messageList) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -75,7 +75,7 @@ public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
         container.remove(0); // update message
         ConnectionEndType endType =
                 state.getContext(getConnectionAlias()).getConnection().getLocalConnectionEndType();
-        ExtensionMessage extensionMessage = generateExtensionMessages(endType);
+        ExtensionMessage extensionMessage = generateExtensionMessages(endType, state);
         if (message.getExtensions() == null) {
             List<ExtensionMessage> messageList = new ArrayList<>();
             messageList.add(extensionMessage);

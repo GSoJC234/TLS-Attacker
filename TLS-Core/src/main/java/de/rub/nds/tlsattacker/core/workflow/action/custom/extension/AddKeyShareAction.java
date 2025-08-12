@@ -15,6 +15,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.extension.KeyShareExtensionM
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.KeyShareEntrySerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.KeyShareExtensionSerializer;
+import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -47,7 +48,7 @@ public class AddKeyShareAction extends AddExtensionAction<KeyShareEntry> {
     }
 
     @Override
-    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType) {
+    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state) {
         KeyShareExtensionMessage message = new KeyShareExtensionMessage();
         message.setExtensionType(ExtensionType.KEY_SHARE.getValue());
 

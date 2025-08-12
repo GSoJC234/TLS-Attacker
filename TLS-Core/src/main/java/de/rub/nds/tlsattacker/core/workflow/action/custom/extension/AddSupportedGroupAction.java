@@ -14,6 +14,7 @@ import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.EllipticCurvesExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.EllipticCurvesExtensionSerializer;
+import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -46,7 +47,7 @@ public class AddSupportedGroupAction extends AddExtensionAction<NamedGroup> {
     }
 
     @Override
-    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType) {
+    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state) {
         EllipticCurvesExtensionMessage message = new EllipticCurvesExtensionMessage();
         message.setExtensionType(ExtensionType.ELLIPTIC_CURVES.getValue());
 

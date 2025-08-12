@@ -14,6 +14,7 @@ import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.SignatureAndHashAlgorithmsExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.SignatureAndHashAlgorithmsExtensionSerializer;
+import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -47,7 +48,7 @@ public class AddSignatureAndHashAlgorithmAction
     }
 
     @Override
-    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType) {
+    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state) {
         SignatureAndHashAlgorithmsExtensionMessage message =
                 new SignatureAndHashAlgorithmsExtensionMessage();
         message.setExtensionType(ExtensionType.SIGNATURE_AND_HASH_ALGORITHMS.getValue());

@@ -18,6 +18,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.extension.PSKKeyExchangeMode
 import de.rub.nds.tlsattacker.core.protocol.message.extension.SupportedVersionsExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PSKKeyExchangeModesExtensionSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.SupportedVersionsExtensionSerializer;
+import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -51,7 +52,7 @@ public class AddPSKExchangeModeAction extends AddExtensionAction<PskKeyExchangeM
     }
 
     @Override
-    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType) {
+    protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state) {
         PSKKeyExchangeModesExtensionMessage message = new PSKKeyExchangeModesExtensionMessage();
         message.setExtensionType(ExtensionType.PSK_KEY_EXCHANGE_MODES.getValue());
 

@@ -81,7 +81,7 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         for (CertificateEntry entry : entry_list) {
             CertificateEntryPreparator preparator =
-                    new CertificateEntryPreparator(state.getContext().getChooser(), entry);
+                    new CertificateEntryPreparator(state.getContext(getConnectionAlias()).getChooser(), entry);
             preparator.prepare();
             CertificatePairSerializer serializer =
                     new CertificatePairSerializer(
