@@ -18,9 +18,11 @@ import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.serializer.RecordSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
+import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.util.List;
+import java.util.Set;
 
 @XmlRootElement(name = "BuildRecordAction")
 public class BuildRecordAction extends ConnectionBoundAction {
@@ -31,9 +33,19 @@ public class BuildRecordAction extends ConnectionBoundAction {
     @XmlTransient private List<ProtocolVersion> version_container = null;
     @XmlTransient private List<ProtocolMessage> message_container = null;
 
-    public BuildRecordAction() {}
+    public BuildRecordAction() {super();}
 
-    public BuildRecordAction(List<Record> record_container) {
+    public BuildRecordAction(String alias) {super(alias);}
+
+    public BuildRecordAction(Set<ActionOption> actionOptions, String alias){
+        super(actionOptions, alias);
+        this.connectionAlias = alias;
+    }
+
+    public BuildRecordAction(Set<ActionOption> actionOptions) { super(actionOptions);}
+
+    public BuildRecordAction(String alias, List<Record> record_container) {
+        super(alias);
         this.record_container = record_container;
     }
 

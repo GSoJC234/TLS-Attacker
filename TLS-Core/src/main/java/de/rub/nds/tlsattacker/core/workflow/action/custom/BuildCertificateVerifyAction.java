@@ -119,7 +119,7 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
             throws CryptoException {
         byte[] toBeSigned = state.getTlsContext(getConnectionAlias()).getDigest().getRawBytes();
         Chooser chooser = state.getTlsContext(getConnectionAlias()).getChooser();
-        if (state.getTlsContext().getChooser().getSelectedProtocolVersion().isTLS13()) {
+        if (state.getTlsContext(getConnectionAlias()).getChooser().getSelectedProtocolVersion().isTLS13()) {
             if (chooser.getConnectionEndType() == ConnectionEndType.CLIENT) {
                 toBeSigned =
                         ArrayConverter.concatenate(

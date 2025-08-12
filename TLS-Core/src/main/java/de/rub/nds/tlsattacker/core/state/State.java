@@ -54,7 +54,7 @@ public class State {
     private Config config = null;
     private RunningModeType runningMode = null;
 
-    @HoldsModifiableVariable private final WorkflowTrace workflowTrace;
+    @HoldsModifiableVariable private WorkflowTrace workflowTrace;
     private WorkflowTrace originalWorkflowTrace;
 
     private long startTimestamp;
@@ -85,6 +85,14 @@ public class State {
         spawnedSubprocesses = new LinkedList<>();
         this.workflowTrace = workflowTrace;
         initState();
+    }
+
+    public void addConfig(Config config) {
+        this.config = config;
+    }
+
+    public void addWorkflowTrace(WorkflowTrace workflowTrace) {
+        this.workflowTrace = workflowTrace;
     }
 
     public void reset() {
@@ -248,9 +256,11 @@ public class State {
         this.runningMode = runningMode;
     }
 
-    private void addContext(Context context) {
+    public void addContext(Context context) {
         contextContainer.addContext(context);
     }
+
+    public void deleteContext(String alias) { contextContainer.removeContext(alias);}
 
     /**
      * Get state's (normalized) workflow trace.

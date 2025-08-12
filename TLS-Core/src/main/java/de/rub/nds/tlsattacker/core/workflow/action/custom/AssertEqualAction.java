@@ -34,12 +34,6 @@ public class AssertEqualAction<T> extends TlsAction {
     public void execute(State state) throws ActionExecutionException {
         comparisonResult = Objects.equals(value1.get(), value2.get());
         if (!comparisonResult) {
-            System.out.println(
-                    "Assertion fails: "
-                            + "value1 -> "
-                            + value1.get()
-                            + ", value2 -> "
-                            + value2.get());
             throw new ActionExecutionException(
                     "Assertion fails: "
                             + "value1 -> "
@@ -47,7 +41,7 @@ public class AssertEqualAction<T> extends TlsAction {
                             + ", value2 -> "
                             + value2.get());
         }
-        System.out.println(
+        LOGGER.info(
                 "Assertion pass: " + "value1 -> " + value1.get() + ", value2 -> " + value2.get());
         setExecuted(true);
     }
