@@ -8,9 +8,12 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
+import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.layer.impl.RecordLayer;
+import de.rub.nds.tlsattacker.core.protocol.handler.FinishedHandler;
+import de.rub.nds.tlsattacker.core.protocol.message.FinishedMessage;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.cipher.cryptohelper.KeySet;
 import de.rub.nds.tlsattacker.core.record.crypto.Encryptor;
@@ -54,6 +57,9 @@ public class EncryptAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
+        if (record_container == null || record_container.isEmpty()) {
+            throw new ActionExecutionException("EncryptAction: record_container is empty");
+        }
         Record record = record_container.get(0);
         TlsContext context = state.getTlsContext(getConnectionAlias());
 
@@ -67,15 +73,36 @@ public class EncryptAction extends ConnectionBoundAction {
         if (connectionId != null) {
             record.setConnectionId(connectionId);
         }
+
+        // 암호화 수행
         record.prepareComputations();
+        Encryptor encryptor = recordLayer.getEncryptor();
+        encryptor.encrypt(record); // protocolMessageBytes(암호문) 채워짐
 
-        Encryptor encryptor =
-                state.getTlsContext(getConnectionAlias()).getRecordLayer().getEncryptor();
-        encryptor.encrypt(record);
+        // TLS 1.3: Finished를 '보낸 직후' write 키를 애플리케이션 키로 전환
+        boolean isTls13 = context.getChooser().getSelectedProtocolVersion().isTLS13();
+        boolean innerIsHandshake =
+                record.getContentMessageType() == ProtocolMessageType.HANDSHAKE;
 
+        byte[] clean = (record.getCleanProtocolMessageBytes() != null)
+                ? record.getCleanProtocolMessageBytes().getValue() : null;
+
+        if (isTls13 && innerIsHandshake && clean != null && clean.length > 0) {
+            int hsType = clean[0] & 0xFF; // HandshakeType 첫 바이트
+            if (hsType == 0x14 /* Finished */) {
+                new FinishedHandler(context).adjustContextAfterSerialize(new FinishedMessage());
+            }
+        }
+
+        // 최종 직렬화
+        if (record.getProtocolMessageBytes() == null
+                || record.getProtocolMessageBytes().getValue() == null) {
+            throw new ActionExecutionException("EncryptAction: protocolMessageBytes is null");
+        }
         RecordSerializer serializer = new RecordSerializer(record);
         record.setLength(record.getProtocolMessageBytes().getValue().length);
         record.setCompleteRecordBytes(serializer.serialize());
+
         setExecuted(true);
     }
 

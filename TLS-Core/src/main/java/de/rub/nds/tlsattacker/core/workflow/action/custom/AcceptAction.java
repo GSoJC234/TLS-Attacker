@@ -85,7 +85,7 @@ public class AcceptAction extends ConnectionBoundAction {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
+        LOGGER.info("Accepting connection!");
         setExecuted(true);
     }
 

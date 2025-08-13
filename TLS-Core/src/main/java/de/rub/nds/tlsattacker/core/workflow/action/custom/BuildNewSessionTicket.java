@@ -63,12 +63,31 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
         message.setShouldPrepareDefault(false);
 
         message.setType(HandshakeMessageType.NEW_SESSION_TICKET.getValue());
+        message.setTicketLifetimeHint(86400);
+
+        byte[] origNonce = ticketOrigin.getTicketNonce().getValue();
+        int nonceLen = (origNonce != null) ? Math.min(origNonce.length, 8) : 4;
+        byte[] nonce = new byte[nonceLen];
+        if (origNonce != null && origNonce.length >= nonceLen) {
+            System.arraycopy(origNonce, 0, nonce, 0, nonceLen);
+        } else {
+            new java.security.SecureRandom().nextBytes(nonce);
+        }
+
+        byte[] identity = ticketOrigin.getIdentity().getValue();
+        if (identity == null || identity.length == 0) {
+            identity = new byte[] { 0x00 }; // 최소 1바이트
+        }
+
         SessionTicket ticket = message.getTicket();
-        ticket.setTicketNonce(ticketOrigin.getTicketNonce());
-        ticket.setTicketNonceLength(ticketOrigin.getTicketNonceLength());
-        ticket.setIdentity(ticketOrigin.getIdentity());
-        ticket.setIdentityLength(ticketOrigin.getIdentityLength());
+        ticket.setTicketNonce(nonce);
+        ticket.setTicketNonceLength(nonce.length);
+        ticket.setIdentity(identity);
+        ticket.setIdentityLength(identity.length);
         ticket.setTicketAgeAdd(ticketOrigin.getTicketAgeAdd());
+
+        message.setExtensionBytes(new byte[0]);
+        message.setExtensionsLength(0);
 
         NewSessionTicketSerializer serializer =
                 new NewSessionTicketSerializer(message, ProtocolVersion.TLS13);

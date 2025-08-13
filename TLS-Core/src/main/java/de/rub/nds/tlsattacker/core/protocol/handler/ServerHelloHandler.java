@@ -13,17 +13,7 @@ import de.rub.nds.protocol.crypto.CyclicGroup;
 import de.rub.nds.protocol.crypto.ec.EllipticCurve;
 import de.rub.nds.protocol.crypto.ec.Point;
 import de.rub.nds.protocol.crypto.ec.PointFormatter;
-import de.rub.nds.tlsattacker.core.constants.AlgorithmResolver;
-import de.rub.nds.tlsattacker.core.constants.Bits;
-import de.rub.nds.tlsattacker.core.constants.CipherSuite;
-import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
-import de.rub.nds.tlsattacker.core.constants.DigestAlgorithm;
-import de.rub.nds.tlsattacker.core.constants.ExtensionType;
-import de.rub.nds.tlsattacker.core.constants.HKDFAlgorithm;
-import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
-import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
-import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
-import de.rub.nds.tlsattacker.core.constants.Tls13KeySetType;
+import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.crypto.HKDFunction;
 import de.rub.nds.tlsattacker.core.crypto.KeyShareCalculator;
 import de.rub.nds.tlsattacker.core.crypto.MessageDigestCollector;
@@ -89,7 +79,18 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
         warnOnConflictingExtensions();
         if (!message.isTls13HelloRetryRequest()) {
             if (tlsContext.getChooser().getSelectedProtocolVersion().isTLS13()) {
-                KeyShareStoreEntry keyShareStoreEntry = adjustKeyShareStoreEntry();
+
+                boolean usePskKe =
+                        tlsContext.getPsk() != null
+                                && tlsContext.getClientPskKeyExchangeModes() != null
+                                && tlsContext.getClientPskKeyExchangeModes().contains(PskKeyExchangeMode.PSK_KE)
+                                && tlsContext.getClientKeyShareStoreEntryList() != null;
+
+                KeyShareStoreEntry keyShareStoreEntry = null;
+                if (!usePskKe) {
+                    keyShareStoreEntry = adjustKeyShareStoreEntry();
+                }
+
                 adjustHandshakeTrafficSecrets(keyShareStoreEntry);
                 if (tlsContext.getTalkingConnectionEndType()
                         != tlsContext.getChooser().getConnectionEndType()) {
@@ -287,14 +288,18 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                             new byte[0]);
             LOGGER.info("saltHandshakeSecret: " + Arrays.toString(saltHandshakeSecret));
             byte[] sharedSecret;
-            BigInteger privateKey =
-                    tlsContext
-                            .getConfig()
-                            .getDefaultKeySharePrivateKey(keyShareStoreEntry.getGroup());
-            LOGGER.info("privateKey: " + privateKey);
-            if (tlsContext.getChooser().getSelectedCipherSuite().isPWD()) {
+            if (keyShareStoreEntry == null){
+                // PSK-Only (PSK_KE)
+                sharedSecret = new byte[0];
+            } else if (tlsContext.getChooser().getSelectedCipherSuite().isPWD()){
                 sharedSecret = computeSharedPWDSecret(keyShareStoreEntry);
             } else {
+                BigInteger privateKey =
+                        tlsContext
+                                .getConfig()
+                                .getDefaultKeySharePrivateKey(keyShareStoreEntry.getGroup());
+                LOGGER.info("privateKey: " + privateKey);
+
                 sharedSecret =
                         KeyShareCalculator.computeSharedSecret(
                                 keyShareStoreEntry.getGroup(),

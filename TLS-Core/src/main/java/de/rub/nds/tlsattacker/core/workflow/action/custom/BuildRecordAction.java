@@ -13,7 +13,8 @@ import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.HandshakeMessage;
+import de.rub.nds.tlsattacker.core.protocol.handler.HandshakeMessageHandler;
+import de.rub.nds.tlsattacker.core.protocol.message.*;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.record.serializer.RecordSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
@@ -63,41 +64,62 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        TlsContext context = state.getTlsContext(getConnectionAlias());
+        TlsContext ctx = state.getTlsContext(getConnectionAlias());
 
-        Record record = new Record();
-        record.setShouldPrepare(false);
-        record.setContentType(record_type_container.get(0).getValue());
-        record.setContentMessageType(record_type_container.get(0));
-        record.setProtocolVersion((version_container.get(0)).getValue());
+        if (message_container == null || message_container.isEmpty()) {
+            throw new ActionExecutionException("BuildRecordAction: message_container is empty");
+        }
+        if (record_type_container == null || record_type_container.isEmpty()) {
+            throw new ActionExecutionException("BuildRecordAction: record_type_container is empty");
+        }
+        if (record_container == null) {
+            throw new ActionExecutionException("BuildRecordAction: record_container is null");
+        }
 
         ProtocolMessage message = message_container.get(0);
-        if (message instanceof HandshakeMessage) {
-            HandshakeMessage handshakeMessage = (HandshakeMessage) message;
+        ProtocolMessageType msgType = record_type_container.get(0);
 
-            context.setTalkingConnectionEndType(
-                    context.getConnection().getLocalConnectionEndType());
-            // HandshakeMessageHandler handler =
-            //        handshakeMessage.getHandler(state.getTlsContext(getConnectionAlias()));
-            // handler.adjustContext(handshakeMessage);
-            // if (!(handshakeMessage instanceof FinishedMessage)) {
-            //    // We do not consider after application data
-            //    // For processing application data, this code should be revised
-            //    handler.adjustContextAfterSerialize(handshakeMessage);
-            // }
+        Record record = new Record();
+        boolean isTls13 = ctx.getChooser().getSelectedProtocolVersion().isTLS13();
+        boolean isHandshake = (msgType == ProtocolMessageType.HANDSHAKE);
 
-            // message.setAdjustContext(false);
+        // TLS 1.3에서도 ClientHello/ServerHello/HelloRetryRequest는 평문 Handshake로 전송
+        boolean isHelloLike =
+                (message instanceof ClientHelloMessage) ||
+                        (message instanceof ServerHelloMessage) ||
+                        (message instanceof HelloRequestMessage);
 
+        // 보호가 필요한 구간? → TLS1.3 && Handshake && !Hello류 (EE/Cert/Finished/NST 등)
+        boolean needsProtection = isTls13 && isHandshake && !isHelloLike;
+
+        if (needsProtection) {
+            // === TLS 1.3 보호 구간: outer=ApplicationData, legacy ver=0x0303, clean만 세팅 ===
+            record.setShouldPrepare(false); // 암호화/직렬화는 EncryptAction에서
+            record.setContentType(msgType.getValue());
+            record.setContentMessageType(msgType);
+            record.setProtocolVersion(ProtocolVersion.TLS12.getValue());            // 0x0303
+            record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
+        } else {
+            // === 평문 구간(TLS1.2 전체 + TLS1.3의 CH/SH/HRR 등): 기존 방식 그대로 직렬화 ===
+            record.setShouldPrepare(false);
+            record.setContentType(msgType.getValue());
+            record.setContentMessageType(msgType);
+
+            if (version_container != null && !version_container.isEmpty()) {
+                record.setProtocolVersion(version_container.get(0).getValue());
+            } else {
+                record.setProtocolVersion(ctx.getChooser().getSelectedProtocolVersion().getValue());
+            }
+
+            record.setProtocolMessageBytes(message.getCompleteResultingMessage());
+            record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
+            record.setLength(record.getProtocolMessageBytes().getValue().length);
+
+            RecordSerializer serializer = new RecordSerializer(record);
+            record.setCompleteRecordBytes(serializer.serialize());
         }
-        record.setProtocolMessageBytes(message.getCompleteResultingMessage());
-        record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
-        record.setLength(record.getProtocolMessageBytes().getValue().length);
-
-        RecordSerializer serializer = new RecordSerializer(record);
-        record.setCompleteRecordBytes(serializer.serialize());
 
         record_container.add(record);
-        System.out.println("BuildRecord: " + message);
         setExecuted(true);
     }
 

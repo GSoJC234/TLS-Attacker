@@ -48,6 +48,9 @@ public class SetUpPSKAction extends ConnectionBoundAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         state.getTlsContext(getConnectionAlias()).setPskSets(pskSetList);
+        state.getTlsContext(getConnectionAlias()).setPsk(pskSetList.get(0).getPreSharedKey());
+        state.getConfig().setUsePsk(true);
+        state.getConfig().setPsk(pskSetList.get(0).getPreSharedKey());
     }
 
     @Override

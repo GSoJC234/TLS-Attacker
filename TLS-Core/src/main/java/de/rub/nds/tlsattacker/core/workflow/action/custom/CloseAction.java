@@ -64,6 +64,7 @@ public class CloseAction extends ConnectionBoundAction {
         }
 
         state.deleteContext(connectionAlias);
+        LOGGER.info("Connection closed!");
         setExecuted(true);
     }
 
