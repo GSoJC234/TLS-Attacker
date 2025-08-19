@@ -8,20 +8,25 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom.extension;
 
+import static de.rub.nds.modifiablevariable.util.ArrayConverter.bytesToHexString;
+
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.protocol.exception.PreparationException;
 import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.crypto.HKDFunction;
+import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.ClientHelloMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.HandshakeMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.PreSharedKeyExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PSKBinder;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PSKIdentity;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PskSet;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ClientHelloSerializer;
+import de.rub.nds.tlsattacker.core.protocol.serializer.HandshakeMessageSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PSKBinderSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PSKIdentitySerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PreSharedKeyExtensionSerializer;
@@ -64,16 +69,6 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         super(alias, container);
     }
 
-    private void calculateActualBinder(PreSharedKeyExtensionMessage message, Chooser chooser){
-        LOGGER.debug("Preparing binder values to replace dummy bytes");
-        ClientHelloSerializer clientHelloSerializer =
-                new ClientHelloSerializer((ClientHelloMessage) container.get(0), ProtocolVersion.TLS13);
-        byte[] clientHelloBytes = clientHelloSerializer.serialize();
-        byte[] relevantBytes = getRelevantBytes(clientHelloBytes, message);
-        calculateBinders(relevantBytes, message, chooser);
-        prepareBinderListBytes(message);
-    }
-
     private void prepareBinderListBytes(PreSharedKeyExtensionMessage msg) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         if (msg.getBinders() != null) {
@@ -82,7 +77,7 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
                 try {
                     outputStream.write(serializer.serialize());
                 } catch (IOException ex) {
-                    throw new PreparationException("Could not write byte[] from PSKIdentity", ex);
+                    throw new PreparationException("Could not write byte[] from PSKBinder", ex);
                 }
             }
         } else {
@@ -92,95 +87,87 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         msg.setBinderListLength(msg.getBinderListBytes().getValue().length);
     }
 
-    private void calculateBinders(byte[] relevantBytes, PreSharedKeyExtensionMessage msg, Chooser chooser) {
+    /**
+     * Compute binders given the full ClientHello bytes that already contain the PSK extension
+     * with ZERO-filled binders of the correct length.
+     */
+    private void calculateBinders(byte[] clientHelloWithZeroBinders,
+                                  PreSharedKeyExtensionMessage msg,
+                                  Chooser chooser) {
         TlsContext tlsContext = chooser.getContext().getTlsContext();
         List<PskSet> pskSets = chooser.getPskSets();
-        if (msg.getBinders() != null) {
-            LOGGER.debug("Calculating Binders");
-            for (int x = 0; x < msg.getBinders().size(); x++) {
-                try {
-                    if (pskSets.size() > x) {
-                        HKDFAlgorithm hkdfAlgorithm =
-                                AlgorithmResolver.getHKDFAlgorithm(pskSets.get(x).getCipherSuite());
-                        Mac mac = Mac.getInstance(hkdfAlgorithm.getMacAlgorithm().getJavaName());
-                        DigestAlgorithm digestAlgo =
-                                AlgorithmResolver.getDigestAlgorithm(
-                                        ProtocolVersion.TLS13, pskSets.get(x).getCipherSuite());
 
-                        byte[] psk = pskSets.get(x).getPreSharedKey();
-                        byte[] earlySecret = HKDFunction.extract(hkdfAlgorithm, new byte[0], psk);
-                        byte[] binderKey =
-                                HKDFunction.deriveSecret(
-                                        hkdfAlgorithm,
-                                        digestAlgo.getJavaName(),
-                                        earlySecret,
-                                        HKDFunction.BINDER_KEY_RES,
-                                        ArrayConverter.hexStringToByteArray(""));
-                        byte[] binderFinKey =
-                                HKDFunction.expandLabel(
-                                        hkdfAlgorithm,
-                                        binderKey,
-                                        HKDFunction.FINISHED,
-                                        new byte[0],
-                                        mac.getMacLength());
-
-                        tlsContext.getDigest().setRawBytes(relevantBytes);
-                        SecretKeySpec keySpec = new SecretKeySpec(binderFinKey, mac.getAlgorithm());
-                        mac.init(keySpec);
-                        mac.update(
-                                tlsContext
-                                        .getDigest()
-                                        .digest(
-                                                ProtocolVersion.TLS13,
-                                                pskSets.get(x).getCipherSuite()));
-                        byte[] binderVal = mac.doFinal();
-                        tlsContext.getDigest().setRawBytes(new byte[0]);
-
-                        LOGGER.debug("Using PSK: {}", psk);
-                        LOGGER.debug("Calculated Binder: {}", binderVal);
-
-                        msg.getBinders().get(x).setBinderEntry(binderVal);
-                        // First entry = PSK for early Data
-                        if (x == 0) {
-                            tlsContext.setEarlyDataPsk(psk);
-                        }
-                    } else {
-                        LOGGER.warn("Skipping BinderCalculation as Config has not enough PSK sets");
-                    }
-                } catch (NoSuchAlgorithmException | InvalidKeyException | CryptoException ex) {
-                    throw new PreparationException("Could not calculate Binders", ex);
-                }
-            }
-        } else {
+        if (msg.getBinders() == null) {
             LOGGER.debug("No PSK dummy binders set, skipping binder computation");
+            return;
         }
-    }
 
-    private byte[] getRelevantBytes(byte[] clientHelloBytes, PreSharedKeyExtensionMessage message) {
-        int remainingBytes = clientHelloBytes.length - ExtensionByteLength.PSK_BINDER_LIST_LENGTH;
-        if (message.getBinders() != null) {
-            for (PSKBinder pskBinder : message.getBinders()) {
-                remainingBytes =
-                        remainingBytes
-                                - ExtensionByteLength.PSK_BINDER_LENGTH
-                                - pskBinder.getBinderEntryLength().getValue();
+        LOGGER.debug("Calculating Binders over zero-filled ClientHello (len={})",
+                clientHelloWithZeroBinders != null ? clientHelloWithZeroBinders.length : 0);
+
+        for (int x = 0; x < msg.getBinders().size(); x++) {
+            try {
+                if (pskSets == null || pskSets.size() <= x) {
+                    throw new PreparationException("No PskSet for binder index " + x);
+                }
+
+                CipherSuite suiteForPsk = pskSets.get(x).getCipherSuite();
+                if (suiteForPsk == null) {
+                    suiteForPsk = chooser.getSelectedCipherSuite();
+                }
+                HKDFAlgorithm hkdfAlgorithm = AlgorithmResolver.getHKDFAlgorithm(suiteForPsk);
+                DigestAlgorithm digestAlgo =
+                        AlgorithmResolver.getDigestAlgorithm(ProtocolVersion.TLS13, suiteForPsk);
+
+                Mac mac = Mac.getInstance(hkdfAlgorithm.getMacAlgorithm().getJavaName());
+                int macLen = mac.getMacLength();
+
+                byte[] psk = pskSets.get(x).getPreSharedKey(); // should already be resumption_psk
+                if (psk == null) {
+                    throw new PreparationException("PSK bytes missing in PskSet[" + x + "]");
+                }
+
+                // Early Secret = HKDF-Extract(0, PSK)
+                byte[] earlySecret = HKDFunction.extract(hkdfAlgorithm, new byte[0], psk);
+
+                // binder_key = Derive-Secret(early, "res binder", "")
+                byte[] binderKey =
+                        HKDFunction.deriveSecret(
+                                hkdfAlgorithm,
+                                digestAlgo.getJavaName(),
+                                earlySecret,
+                                HKDFunction.BINDER_KEY_RES,
+                                ArrayConverter.hexStringToByteArray(""));
+
+                // finished_key(binder) = HKDF-Expand-Label(binder_key, "finished", "", macLen)
+                byte[] binderFinKey =
+                        HKDFunction.expandLabel(
+                                hkdfAlgorithm, binderKey, HKDFunction.FINISHED, new byte[0], macLen);
+
+                // Transcript-Hash over ClientHello that includes PSK extension with zeroed binders
+                tlsContext.getDigest().setRawBytes(clientHelloWithZeroBinders);
+                SecretKeySpec keySpec = new SecretKeySpec(binderFinKey, mac.getAlgorithm());
+                mac.init(keySpec);
+                mac.update(tlsContext.getDigest().digest(ProtocolVersion.TLS13, suiteForPsk));
+                byte[] binderVal = mac.doFinal();
+                tlsContext.getDigest().setRawBytes(new byte[0]);
+
+                LOGGER.debug("Using PSK[{}] (len={}): {}", x, psk.length, bytesToHexString(psk));
+                LOGGER.debug("Calculated Binder[{}] (len={}): {}", x, binderVal.length, bytesToHexString(binderVal));
+
+                // Set binder value and length
+                PSKBinder binder = msg.getBinders().get(x);
+                binder.setBinderEntry(binderVal);
+                binder.setBinderEntryLength(binderVal.length);
+
+                // First entry = PSK for early data (if needed downstream)
+                if (x == 0) {
+                    tlsContext.setEarlyDataPsk(psk);
+                }
+
+            } catch (NoSuchAlgorithmException | InvalidKeyException | CryptoException ex) {
+                throw new PreparationException("Could not calculate Binders", ex);
             }
-        }
-        if (remainingBytes > 0) {
-            byte[] relevantBytes = new byte[remainingBytes];
-
-            System.arraycopy(
-                    clientHelloBytes,
-                    0,
-                    relevantBytes,
-                    0,
-                    Math.min(remainingBytes, clientHelloBytes.length));
-
-            LOGGER.debug("Relevant Bytes: {}", relevantBytes);
-            return relevantBytes;
-        } else {
-            // This can happen if the client hello degenerates
-            return new byte[0];
         }
     }
 
@@ -190,28 +177,56 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         message.setExtensionType(ExtensionType.PRE_SHARED_KEY.getValue());
 
         List<SessionTicket> sessionTickets = extension_container;
-        if(endType == ConnectionEndType.CLIENT) {
-            List<PSKIdentity> identities = new ArrayList<PSKIdentity>();
-            List<PSKBinder> binders = new ArrayList<PSKBinder>();
 
-            for(SessionTicket t : sessionTickets) {
+        if (endType == ConnectionEndType.CLIENT) {
+            Chooser chooser = state.getContext(getConnectionAlias()).getChooser();
+            List<PskSet> pskSets = chooser.getPskSets();
+
+            List<PSKIdentity> identities = new ArrayList<>();
+            List<PSKBinder> binders = new ArrayList<>();
+
+            for (SessionTicket t : sessionTickets) {
+                // Identity
                 PSKIdentity id = new PSKIdentity();
                 id.setIdentity(t.getIdentity().getValue());
-                id.setIdentityLength(t.getIdentityLength().getValue());
+                if (t.getIdentity() != null && t.getIdentity().getValue() != null) {
+                    id.setIdentityLength(t.getIdentity().getValue().length);
+                } else {
+                    id.setIdentityLength(0);
+                }
 
+                // NOTE: Real obfuscated age is (age_ms + ticket_age_add) mod 2^32.
+                // Here we keep prior behavior as provided by the caller.
                 id.setObfuscatedTicketAge(t.getTicketAgeAdd().getValue());
                 identities.add(id);
 
+                // Binder dummy (ZERO-filled) with correct hash length
                 PSKBinder binder = new PSKBinder();
-                binder.setBinderEntryLength(0);
-                binder.setBinderEntry(new byte[0]);
+                int idx = binders.size();
+
+                CipherSuite suiteForPsk =
+                        (pskSets != null && idx < pskSets.size() && pskSets.get(idx).getCipherSuite() != null)
+                                ? pskSets.get(idx).getCipherSuite()
+                                : chooser.getSelectedCipherSuite();
+
+                HKDFAlgorithm hkdfAlg = AlgorithmResolver.getHKDFAlgorithm(suiteForPsk);
+                int hashLen;
+                try {
+                    Mac hmac = Mac.getInstance(hkdfAlg.getMacAlgorithm().getJavaName()); // e.g., HmacSHA256
+                    hashLen = hmac.getMacLength(); // 32 for SHA-256, 48 for SHA-384, ...
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException("No Mac for " + hkdfAlg.getMacAlgorithm().getJavaName(), e);
+                }
+
+                binder.setBinderEntryLength(hashLen);
+                binder.setBinderEntry(new byte[hashLen]); // zero-filled placeholder
                 binders.add(binder);
             }
 
             message.setIdentities(identities);
             message.setBinders(binders);
 
-            // identity_list 직렬화/길이
+            // identity_list bytes/length
             try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 for (PSKIdentity id : identities) {
                     out.write(new PSKIdentitySerializer(id).serialize());
@@ -222,7 +237,7 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
             }
             message.setIdentityListLength(message.getIdentityListBytes().getValue().length);
 
-            // binder_list 직렬화/길이 (현재는 더미)
+            // binder_list bytes/length (ZERO-filled dummies for now)
             try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 for (PSKBinder b : binders) {
                     out.write(new PSKBinderSerializer(b).serialize());
@@ -232,8 +247,7 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
                 throw new RuntimeException("Failed to serialize PSK binders", e);
             }
             message.setBinderListLength(message.getBinderListBytes().getValue().length);
-
-        } else {
+        } else { // Server side: only selected_identity is relevant
             SessionTicket ticket = sessionTickets.get(0);
             message.setSelectedIdentity(0);
         }
@@ -243,12 +257,77 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         message.setExtensionContent(serializer.serializeExtensionContent());
         message.setExtensionLength(message.getExtensionContent().getValue().length);
         message.setExtensionBytes(serializer.serialize());
-
-        if(endType == ConnectionEndType.CLIENT) {
-            calculateActualBinder(message, state.getContext(getConnectionAlias()).getChooser());
-        }
-
         return message;
     }
 
+    /**
+     * Override to ensure the binder input equals the full ClientHello that already
+     * includes the PSK extension with ZERO-filled binders.
+     *
+     * Steps:
+     *  1) Build PSK extension (with zero binders) via generateExtensionMessages().
+     *  2) Append PSK extension to ClientHello (as LAST extension) and serialize ClientHello.
+     *  3) Compute binders over that serialized ClientHello.
+     *  4) Replace binders and re-serialize extension + ClientHello.
+     */
+    @Override
+    public void execute(State state) throws ActionExecutionException {
+        try {
+            HandshakeMessage message = (HandshakeMessage) container.get(0);
+            ConnectionEndType endType =
+                    state.getContext(getConnectionAlias()).getConnection().getLocalConnectionEndType();
+
+            // 1) PSK 확장(제로 바인더 상태) 생성
+            PreSharedKeyExtensionMessage pskExt =
+                    (PreSharedKeyExtensionMessage) generateExtensionMessages(endType, state);
+
+            // 2) 확장 리스트의 마지막에 추가 (pre_shared_key는 반드시 마지막)
+            if (message.getExtensions() == null) {
+                List<ExtensionMessage> messageList = new ArrayList<>();
+                messageList.add(pskExt);
+                message.setExtensions(messageList);
+            } else {
+                message.getExtensions().add(pskExt);
+            }
+            // ✅ 확장 블록만 갱신 (핸드셰이크 전체 직렬화는 아직 하지 않음)
+            message.setExtensionBytes(extensionMessageBytes(message.getExtensions()));
+            message.setExtensionsLength(message.getExtensionBytes().getValue().length);
+
+            // 3) 바인더 입력용 ClientHello 바이트를 "직접" 뽑는다 (메시지에 반영 X)
+            ClientHelloSerializer chSerForHash =
+                    new ClientHelloSerializer((ClientHelloMessage) message, ProtocolVersion.TLS13);
+            byte[] clientHelloWithZeroBinders = chSerForHash.serialize();
+
+            // 4) 바인더 계산 및 값 반영
+            Chooser chooser = state.getContext(getConnectionAlias()).getChooser();
+            calculateBinders(clientHelloWithZeroBinders, pskExt, chooser);
+
+            // 5) PSK 확장 재직렬화 (바인더 값 반영)
+            prepareBinderListBytes(pskExt);
+            PreSharedKeyExtensionSerializer extSer =
+                    new PreSharedKeyExtensionSerializer(pskExt, endType);
+            pskExt.setExtensionContent(extSer.serializeExtensionContent());
+            pskExt.setExtensionLength(pskExt.getExtensionContent().getValue().length);
+            pskExt.setExtensionBytes(extSer.serialize());
+
+            // 6) 확장 블록 갱신
+            message.setExtensionBytes(extensionMessageBytes(message.getExtensions()));
+            message.setExtensionsLength(message.getExtensionBytes().getValue().length);
+
+            // 7) 🔒 이제 딱 한 번만 핸드셰이크 전체 직렬화
+            HandshakeMessageSerializer<?> serializer =
+                    message.getSerializer(state.getTlsContext(getConnectionAlias()));
+            message.setMessageContent(serializer.serializeHandshakeMessageContent());
+            message.setLength(message.getMessageContent().getValue().length);
+            message.setCompleteResultingMessage(serializer.serialize());
+
+            // 마무리
+            container.remove(0);
+            container.add(message);
+            setExecuted(true);
+
+        } catch (RuntimeException e) {
+            throw new ActionExecutionException("Failed to execute AddPreSharedKeyAction", e);
+        }
+    }
 }

@@ -72,7 +72,7 @@ public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         HandshakeMessage message = (HandshakeMessage) container.get(0);
-        container.remove(0); // update message
+        // update message
         ConnectionEndType endType =
                 state.getContext(getConnectionAlias()).getConnection().getLocalConnectionEndType();
         ExtensionMessage extensionMessage = generateExtensionMessages(endType, state);
@@ -92,6 +92,7 @@ public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
         message.setLength(message.getMessageContent().getValue().length);
         message.setCompleteResultingMessage(serializer.serialize());
 
+        container.remove(0);
         container.add(message);
         setExecuted(true);
     }
