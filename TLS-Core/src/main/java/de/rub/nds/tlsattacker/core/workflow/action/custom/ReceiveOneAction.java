@@ -58,6 +58,7 @@ public class ReceiveOneAction extends CommonReceiveAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
+        tlsContext.getConnection().setTimeout(100000);
 
         if (isExecuted()) {
             throw new ActionExecutionException("Action already executed!");

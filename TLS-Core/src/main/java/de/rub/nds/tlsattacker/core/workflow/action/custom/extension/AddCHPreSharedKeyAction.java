@@ -26,7 +26,6 @@ import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PSKBinder;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PSKIdentity;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PskSet;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ClientHelloSerializer;
-import de.rub.nds.tlsattacker.core.protocol.serializer.HandshakeMessageSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PSKBinderSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PSKIdentitySerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PreSharedKeyExtensionSerializer;
@@ -48,24 +47,24 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 @XmlRootElement(name = "AddPreSharedKeyAction")
-public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
-    public AddPreSharedKeyAction() {
+public class AddCHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
+    public AddCHPreSharedKeyAction() {
         super();
     }
 
-    public AddPreSharedKeyAction(String alias) {
+    public AddCHPreSharedKeyAction(String alias) {
         super(alias);
     }
 
-    public AddPreSharedKeyAction(Set<ActionOption> actionOptions, String alias) {
+    public AddCHPreSharedKeyAction(Set<ActionOption> actionOptions, String alias) {
         super(actionOptions, alias);
     }
 
-    public AddPreSharedKeyAction(Set<ActionOption> actionOptions) {
+    public AddCHPreSharedKeyAction(Set<ActionOption> actionOptions) {
         super(actionOptions);
     }
 
-    public AddPreSharedKeyAction(String alias, List<ProtocolMessage> container) {
+    public AddCHPreSharedKeyAction(String alias, List<ProtocolMessage> container) {
         super(alias, container);
     }
 
@@ -113,7 +112,7 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
 
                 CipherSuite suiteForPsk = pskSets.get(x).getCipherSuite();
                 if (suiteForPsk == null) {
-                    suiteForPsk = chooser.getSelectedCipherSuite();
+                    throw new PreparationException("No previous cipher suite");
                 }
                 HKDFAlgorithm hkdfAlgorithm = AlgorithmResolver.getHKDFAlgorithm(suiteForPsk);
                 DigestAlgorithm digestAlgo =
@@ -296,11 +295,17 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
             // 3) 바인더 입력용 ClientHello 바이트를 "직접" 뽑는다 (메시지에 반영 X)
             ClientHelloSerializer chSerForHash =
                     new ClientHelloSerializer((ClientHelloMessage) message, ProtocolVersion.TLS13);
-            byte[] clientHelloWithZeroBinders = chSerForHash.serialize();
+            message.setMessageContent(chSerForHash.serializeHandshakeMessageContent());
+            message.setLength(message.getMessageContent().getValue().length);
+            message.setCompleteResultingMessage(chSerForHash.serialize());
+
+            byte[] clientHelloWithZeroBinders = message.getCompleteResultingMessage().getValue();
+            int binderLength = pskExt.getBinderListLength().getValue();
+            byte[] clientHelloWithoutBinders = Arrays.copyOfRange(clientHelloWithZeroBinders, 0, clientHelloWithZeroBinders.length - binderLength - ExtensionByteLength.PSK_BINDER_LIST_LENGTH);
 
             // 4) 바인더 계산 및 값 반영
             Chooser chooser = state.getContext(getConnectionAlias()).getChooser();
-            calculateBinders(clientHelloWithZeroBinders, pskExt, chooser);
+            calculateBinders(clientHelloWithoutBinders, pskExt, chooser);
 
             // 5) PSK 확장 재직렬화 (바인더 값 반영)
             prepareBinderListBytes(pskExt);
@@ -314,12 +319,10 @@ public class AddPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
             message.setExtensionBytes(extensionMessageBytes(message.getExtensions()));
             message.setExtensionsLength(message.getExtensionBytes().getValue().length);
 
-            // 7) 🔒 이제 딱 한 번만 핸드셰이크 전체 직렬화
-            HandshakeMessageSerializer<?> serializer =
-                    message.getSerializer(state.getTlsContext(getConnectionAlias()));
-            message.setMessageContent(serializer.serializeHandshakeMessageContent());
+            ClientHelloSerializer clientHelloSerializer = new ClientHelloSerializer((ClientHelloMessage) message, ProtocolVersion.TLS13);
+            message.setMessageContent(clientHelloSerializer.serializeHandshakeMessageContent());
             message.setLength(message.getMessageContent().getValue().length);
-            message.setCompleteResultingMessage(serializer.serialize());
+            message.setCompleteResultingMessage(clientHelloSerializer.serialize());
 
             // 마무리
             container.remove(0);

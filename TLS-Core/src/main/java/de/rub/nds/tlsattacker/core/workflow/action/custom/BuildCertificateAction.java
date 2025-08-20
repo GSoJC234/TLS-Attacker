@@ -100,7 +100,7 @@ public class BuildCertificateAction extends ConnectionBoundAction {
             switch (context.getConnection().getLocalConnectionEndType()) {
                 case CLIENT:
                     message.setRequestContext(this.certificate_request_container.get(0));
-                    message.setRequestContextLength(message.getRequestContextLength());
+                    message.setRequestContextLength(message.getRequestContext().getValue().length);
                     break;
                 case SERVER:
                     message.setRequestContext(new byte[] {});
