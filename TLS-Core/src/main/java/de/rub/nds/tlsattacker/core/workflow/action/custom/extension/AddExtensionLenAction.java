@@ -8,88 +8,59 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom.extension;
 
+import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.HandshakeMessage;
-import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.serializer.HandshakeMessageSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
+import de.rub.nds.tlsattacker.core.workflow.action.custom.SizeCalculator;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
-import de.rub.nds.tlsattacker.transport.ConnectionEndType;
+import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
+@XmlRootElement(name = "AddExtensionLenAction")
+public class AddExtensionLenAction extends ConnectionBoundAction {
 
     @XmlTransient protected List<ProtocolMessage> container = null;
-    @XmlTransient protected List<T> extension_container = null;
     @XmlTransient protected List<Integer> extension_len = null;
 
-    public AddExtensionAction() {
+    public AddExtensionLenAction() {
         super();
     }
 
-    public AddExtensionAction(String alias) {
+    public AddExtensionLenAction(String alias) {
         super(alias);
     }
 
-    public AddExtensionAction(Set<ActionOption> actionOptions, String alias) {
+    public AddExtensionLenAction(Set<ActionOption> actionOptions, String alias) {
         super(actionOptions, alias);
         this.connectionAlias = alias;
     }
 
-    public AddExtensionAction(Set<ActionOption> actionOptions) {
+    public AddExtensionLenAction(Set<ActionOption> actionOptions) {
         super(actionOptions);
     }
 
-    public AddExtensionAction(String alias, List<ProtocolMessage> container) {
+    public AddExtensionLenAction(String alias, List<ProtocolMessage> container) {
         super(alias);
         this.container = container;
-    }
-
-    public void setExtensions(List<T> extension_container) {
-        this.extension_container = extension_container;
     }
 
     public void setExtensionLen(List<Integer> extension_len) {
         this.extension_len = extension_len;
     }
 
-    protected abstract ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state);
-
-    protected byte[] extensionMessageBytes(List<ExtensionMessage> messageList) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for (ExtensionMessage message : messageList) {
-            try {
-                baos.write(message.getExtensionBytes().getValue());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return baos.toByteArray();
-    }
-
     @Override
     public void execute(State state) throws ActionExecutionException {
         HandshakeMessage message = (HandshakeMessage) container.get(0);
-        // update message
-        ConnectionEndType endType =
-                state.getContext(getConnectionAlias()).getConnection().getLocalConnectionEndType();
-        ExtensionMessage extensionMessage = generateExtensionMessages(endType, state);
-        if (message.getExtensions() == null) {
-            List<ExtensionMessage> messageList = new ArrayList<>();
-            messageList.add(extensionMessage);
-            message.setExtensions(messageList);
-        } else {
-            message.getExtensions().add(extensionMessage);
-        }
-        message.setExtensionBytes(extensionMessageBytes(message.getExtensions()));
-        message.setExtensionsLength(message.getExtensionBytes().getValue().length);
+        int defaultLen = message.getExtensionBytes().getValue().length;
+        int len = (extension_len == null) ? defaultLen
+                : SizeCalculator.calculate(extension_len.get(0), defaultLen, HandshakeByteLength.EXTENSION_LENGTH);
+        message.setExtensionsLength(len);
 
         HandshakeMessageSerializer<?> serializer =
                 message.getSerializer(state.getTlsContext(getConnectionAlias()));

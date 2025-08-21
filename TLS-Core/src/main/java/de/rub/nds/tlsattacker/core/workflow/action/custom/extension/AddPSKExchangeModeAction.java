@@ -8,10 +8,7 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom.extension;
 
-import de.rub.nds.tlsattacker.core.constants.ExtensionType;
-import de.rub.nds.tlsattacker.core.constants.NamedGroup;
-import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
-import de.rub.nds.tlsattacker.core.constants.PskKeyExchangeMode;
+import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.PSKKeyExchangeModesExtensionMessage;
@@ -19,6 +16,7 @@ import de.rub.nds.tlsattacker.core.protocol.message.extension.SupportedVersionsE
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.PSKKeyExchangeModesExtensionSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.SupportedVersionsExtensionSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
+import de.rub.nds.tlsattacker.core.workflow.action.custom.SizeCalculator;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -63,7 +61,10 @@ public class AddPSKExchangeModeAction extends AddExtensionAction<PskKeyExchangeM
         PSKKeyExchangeModesExtensionSerializer serializer =
                 new PSKKeyExchangeModesExtensionSerializer(message);
         message.setExtensionContent(serializer.serializeExtensionContent());
-        message.setExtensionLength(message.getExtensionContent().getValue().length);
+        int defaultLen = message.getExtensionContent().getValue().length;
+        int len = (extension_len == null) ? defaultLen
+                : SizeCalculator.calculate(extension_len.get(0), defaultLen, HandshakeByteLength.EXTENSION_LENGTH);
+        message.setExtensionLength(len);
         message.setExtensionBytes(serializer.serialize());
 
         System.out.println("PskKeyExchangeModesExtension: " + message);

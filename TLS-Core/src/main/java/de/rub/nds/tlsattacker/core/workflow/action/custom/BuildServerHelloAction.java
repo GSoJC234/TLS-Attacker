@@ -32,6 +32,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<CipherSuite> suite_container = null;
     @XmlTransient private List<byte[]> random_container = null;
     @XmlTransient private List<byte[]> session_id_container = null;
+    @XmlTransient private List<Integer> sessionIdLen = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
 
     public BuildServerHelloAction() {
@@ -72,6 +73,10 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         this.session_id_container = session_id_container;
     }
 
+    public void setSessionIdLen(List<Integer> sessionIdLen){
+        this.sessionIdLen = sessionIdLen;
+    }
+
     public void setCompression(List<CompressionMethod> compression_container) {
         this.compression_container = compression_container;
     }
@@ -87,7 +92,10 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         message.setUnixTime(new byte[] {0x00, 0x00}); // dummy
         message.setRandom(random_container.get(0));
         message.setSessionId(session_id_container.get(0));
-        message.setSessionIdLength(message.getSessionId().getValue().length);
+        int defaultLen = message.getSessionId().getValue().length;
+        int len = (sessionIdLen == null) ? defaultLen
+                : SizeCalculator.calculate(sessionIdLen.get(0), defaultLen, HandshakeByteLength.SESSION_ID_LENGTH);
+        message.setSessionIdLength(len);
         message.setSelectedCompressionMethod(compression_container.get(0).getValue());
 
         ServerHelloSerializer serializer = new ServerHelloSerializer(message);

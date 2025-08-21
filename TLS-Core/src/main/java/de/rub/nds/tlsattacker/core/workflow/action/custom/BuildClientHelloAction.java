@@ -8,10 +8,7 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
-import de.rub.nds.tlsattacker.core.constants.CipherSuite;
-import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
-import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
-import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.ClientHelloMessage;
@@ -31,9 +28,12 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
 
     @XmlTransient protected List<ProtocolMessage> container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
+    @XmlTransient private List<Integer> cipherSuitesLen = null;
     @XmlTransient private List<CipherSuite> suite_container = null;
     @XmlTransient private List<byte[]> random_container = null;
+    @XmlTransient private List<Integer> sessionIdLen = null;
     @XmlTransient private List<byte[]> session_id_container = null;
+    @XmlTransient private List<Integer> compression_len = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
 
     private static final int RANDOM_LENGTH_FALLBACK = 4393139;
@@ -80,6 +80,18 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         this.compression_container = compression_container;
     }
 
+    public void setCipherSuitesLen(List<Integer> cipherSuitesLen) {
+        this.cipherSuitesLen = cipherSuitesLen;
+    }
+
+    public void setSessionIdLen(List<Integer> sessionIdLen) {
+        this.sessionIdLen = sessionIdLen;
+    }
+
+    public void setCompressionsLen(List<Integer> compression_len) {
+        this.compression_len = compression_len;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         ClientHelloMessage message = new ClientHelloMessage();
@@ -90,15 +102,25 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         message.setProtocolVersion(version_container.get(0).getValue());
 
         message.setCipherSuites(serializeCipherSuites(suite_container));
-        message.setCipherSuiteLength(message.getCipherSuites().getValue().length);
+        int defaultLen1 = message.getCipherSuites().getValue().length;
+        int len1 = (cipherSuitesLen == null) ? defaultLen1
+                : SizeCalculator.calculate(cipherSuitesLen.get(0), defaultLen1, HandshakeByteLength.CIPHER_SUITES_LENGTH);
+        message.setCipherSuiteLength(len1);
+
         message.setUnixTime(new byte[] {0x00, 0x00}); // dummy
         message.setRandom(random_container.get(0));
 
         message.setSessionId(session_id_container.get(0));
-        message.setSessionIdLength(message.getSessionId().getValue().length);
+        int defaultLen2 = message.getSessionId().getValue().length;
+        int len2 = (sessionIdLen == null) ? defaultLen2
+                : SizeCalculator.calculate(sessionIdLen.get(0), defaultLen2, HandshakeByteLength.SESSION_ID_LENGTH);
+        message.setSessionIdLength(len2);
 
         message.setCompressions(serializeCompressionMethods(compression_container));
-        message.setCompressionLength(message.getCompressions().getValue().length);
+        int defaultLen3 = message.getCompressions().getValue().length;
+        int len3 = (compression_len == null) ? defaultLen3
+                : SizeCalculator.calculate(compression_len.get(0), defaultLen3, HandshakeByteLength.COMPRESSION_LENGTH);
+        message.setCompressionLength(len3);
 
         ClientHelloSerializer serializer =
                 new ClientHelloSerializer(message, ProtocolVersion.TLS13);
