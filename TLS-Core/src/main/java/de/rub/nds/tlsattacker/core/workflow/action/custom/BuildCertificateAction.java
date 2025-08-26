@@ -8,6 +8,7 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
+import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
@@ -33,7 +34,9 @@ import java.util.Set;
 public class BuildCertificateAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
+    @XmlTransient private List<Integer> certificate_len = null;
     @XmlTransient private List<CertificateEntry> entry_container = null;
+    @XmlTransient private List<Integer> certificate_request_context_len = null;
     @XmlTransient private List<byte[]> certificate_request_container = null;
 
     public BuildCertificateAction() {
@@ -60,6 +63,14 @@ public class BuildCertificateAction extends ConnectionBoundAction {
 
     public void setCertificate(List<CertificateEntry> entry_container) {
         this.entry_container = entry_container;
+    }
+
+    public void setCertificateLen(List<Integer> certificate_len) {
+        this.certificate_len = certificate_len;
+    }
+
+    public void setCertificateRequestContextLen(List<Integer> certificate_request_context_len) {
+        this.certificate_request_context_len = certificate_request_context_len;
     }
 
     public void setCertificateRequestContext(List<byte[]> certificate_request_context) {
@@ -94,13 +105,19 @@ public class BuildCertificateAction extends ConnectionBoundAction {
             }
         }
         message.setCertificatesListBytes(stream.toByteArray());
-        message.setCertificatesListLength(message.getCertificatesListBytes().getValue().length);
+        int defaultLen = message.getCertificatesListBytes().getValue().length;
+        int len = (certificate_len == null) ? defaultLen
+                : SizeCalculator.calculate(certificate_len.get(0), defaultLen, HandshakeByteLength.CERTIFICATES_LENGTH);
+        message.setCertificatesListLength(len);
 
         if (context.getTlsContext().getSelectedProtocolVersion() == ProtocolVersion.TLS13) {
             switch (context.getConnection().getLocalConnectionEndType()) {
                 case CLIENT:
                     message.setRequestContext(this.certificate_request_container.get(0));
-                    message.setRequestContextLength(message.getRequestContext().getValue().length);
+                    int defaultLen2 = message.getRequestContext().getValue().length;
+                    int len2 = (certificate_len == null) ? defaultLen2
+                            : SizeCalculator.calculate(certificate_request_context_len.get(0), defaultLen, HandshakeByteLength.CERTIFICATE_REQUEST_CONTEXT_LENGTH);
+                    message.setRequestContextLength(len2);
                     break;
                 case SERVER:
                     message.setRequestContext(new byte[] {});

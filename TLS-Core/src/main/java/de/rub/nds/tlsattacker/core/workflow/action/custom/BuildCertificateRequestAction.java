@@ -27,8 +27,8 @@ import java.util.Set;
 public class BuildCertificateRequestAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
-
     @XmlTransient private List<byte[]> certificate_request_container = null;
+    @XmlTransient private List<Integer> certificate_request_context_len = null;
 
     public BuildCertificateRequestAction() {
         super();
@@ -56,6 +56,10 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         this.certificate_request_container = certificate_request_context;
     }
 
+    public void setCertificateRequestContextLen(List<Integer> certificate_request_context_len) {
+        this.certificate_request_context_len = certificate_request_context_len;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         Context context = state.getContext(getConnectionAlias());
@@ -64,8 +68,10 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         message.setShouldPrepareDefault(false);
         message.setType(HandshakeMessageType.CERTIFICATE_REQUEST.getValue());
         message.setCertificateRequestContext(certificate_request_container.get(0));
-        message.setCertificateRequestContextLength(
-                message.getCertificateRequestContext().getValue().length);
+        int defaultLen = message.getCertificateRequestContext().getValue().length;
+        int len = (certificate_request_context_len == null) ? defaultLen
+                : SizeCalculator.calculate(certificate_request_context_len.get(0), defaultLen, HandshakeByteLength.CERTIFICATE_REQUEST_CONTEXT_LENGTH);
+        message.setCertificateRequestContextLength(len);
         message.setClientCertificateTypesCount(0);
         message.setExtensionsLength(0);
         message.setExtensionBytes(new byte[]{});
