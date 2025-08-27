@@ -116,7 +116,7 @@ public class BuildCertificateAction extends ConnectionBoundAction {
                     message.setRequestContext(this.certificate_request_container.get(0));
                     int defaultLen2 = message.getRequestContext().getValue().length;
                     int len2 = (certificate_len == null) ? defaultLen2
-                            : SizeCalculator.calculate(certificate_request_context_len.get(0), defaultLen, HandshakeByteLength.CERTIFICATE_REQUEST_CONTEXT_LENGTH);
+                            : SizeCalculator.calculate(certificate_request_context_len.get(0), defaultLen2, HandshakeByteLength.CERTIFICATE_REQUEST_CONTEXT_LENGTH);
                     message.setRequestContextLength(len2);
                     break;
                 case SERVER:
