@@ -57,6 +57,11 @@ public class AddExtensionLenAction extends ConnectionBoundAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         HandshakeMessage message = (HandshakeMessage) container.get(0);
+        if(message.getExtensionBytes() == null){
+            setExecuted(true);
+            return;
+        }
+
         int defaultLen = message.getExtensionBytes().getValue().length;
         int len = (extension_len == null) ? defaultLen
                 : SizeCalculator.calculate(extension_len.get(0), defaultLen, HandshakeByteLength.EXTENSION_LENGTH);
