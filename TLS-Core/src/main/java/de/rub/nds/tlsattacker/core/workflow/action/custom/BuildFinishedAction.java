@@ -36,6 +36,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class BuildFinishedAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<byte[]> verify_data_container = null;
 
     public BuildFinishedAction() {
@@ -64,11 +65,19 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         this.verify_data_container = verify_data_container;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         FinishedMessage message = new FinishedMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(HandshakeMessageType.FINISHED.getValue());
+        if(type_container != null){
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.FINISHED.getValue());
+        }
         if (verify_data_container != null) {
             message.setVerifyData(verify_data_container.get(0));
         } else {

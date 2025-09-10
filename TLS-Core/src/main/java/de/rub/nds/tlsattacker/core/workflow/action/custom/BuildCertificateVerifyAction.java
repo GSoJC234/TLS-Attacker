@@ -36,7 +36,7 @@ import java.util.Set;
 public class BuildCertificateVerifyAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
-
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<byte[]> signature_container = null;
     @XmlTransient private List<byte[]> certificatePrivateKey_container = null;
 
@@ -74,6 +74,10 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         this.certificatePrivateKey_container = certificatePrivateKey_container;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     public void setSignature(List<byte[]> signature_container) {
         this.signature_container = signature_container;
     }
@@ -92,8 +96,11 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
 
         CertificateVerifyMessage message = new CertificateVerifyMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(HandshakeMessageType.CERTIFICATE_VERIFY.getValue());
-
+        if(type_container != null) {
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.CERTIFICATE_VERIFY.getValue());
+        }
         message.setSignatureHashAlgorithm(algorithm.getByteValue());
 
         if (signature_container != null) {

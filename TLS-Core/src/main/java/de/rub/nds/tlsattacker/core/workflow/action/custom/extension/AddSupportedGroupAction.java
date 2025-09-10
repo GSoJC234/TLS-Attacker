@@ -50,6 +50,8 @@ public class AddSupportedGroupAction extends AddExtensionAction<NamedGroup> {
 
     @Override
     protected ExtensionMessage generateExtensionMessages(ConnectionEndType endType, State state) {
+
+
         EllipticCurvesExtensionMessage message = new EllipticCurvesExtensionMessage();
         message.setExtensionType(ExtensionType.ELLIPTIC_CURVES.getValue());
 

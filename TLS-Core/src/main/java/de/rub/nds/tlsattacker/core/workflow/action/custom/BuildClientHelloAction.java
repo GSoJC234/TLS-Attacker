@@ -27,6 +27,7 @@ import java.util.Set;
 public class BuildClientHelloAction extends ConnectionBoundAction {
 
     @XmlTransient protected List<ProtocolMessage> container = null;
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
     @XmlTransient private List<Integer> cipherSuitesLen = null;
     @XmlTransient private List<CipherSuite> suite_container = null;
@@ -92,12 +93,20 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         this.compression_len = compression_len;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         ClientHelloMessage message = new ClientHelloMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setType(HandshakeMessageType.CLIENT_HELLO.getValue());
+        if(this.type_container != null) {
+            message.setType(this.type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.CLIENT_HELLO.getValue());
+        }
 
         message.setProtocolVersion(version_container.get(0).getValue());
 

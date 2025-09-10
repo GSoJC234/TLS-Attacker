@@ -27,6 +27,7 @@ import java.util.Set;
 public class BuildNewSessionTicket extends ConnectionBoundAction  {
 
     @XmlTransient protected List<ProtocolMessage> container = null;
+    @XmlTransient protected List<HandshakeMessageType> type_container = null;
     @XmlTransient protected List<SessionTicket> ticketList = null;
 
     public BuildNewSessionTicket() {
@@ -51,6 +52,11 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
         this.container = container;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
+
     public void setTicket(List<SessionTicket> ticketList) {
         this.ticketList = ticketList;
     }
@@ -62,7 +68,11 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
         NewSessionTicketMessage message = new NewSessionTicketMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setType(HandshakeMessageType.NEW_SESSION_TICKET.getValue());
+        if (type_container != null) {
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.NEW_SESSION_TICKET.getValue());
+        }
         message.setTicketLifetimeHint(86400);
 
         byte[] origNonce = ticketOrigin.getTicketNonce().getValue();

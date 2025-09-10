@@ -29,6 +29,7 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<ProtocolMessage> container = null;
 
     @XmlTransient private List<ProtocolVersion> version_container = null;
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<CipherSuite> suite_container = null;
     @XmlTransient private List<byte[]> random_container = null;
     @XmlTransient private List<byte[]> session_id_container = null;
@@ -77,6 +78,10 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         this.sessionIdLen = sessionIdLen;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     public void setCompression(List<CompressionMethod> compression_container) {
         this.compression_container = compression_container;
     }
@@ -86,7 +91,11 @@ public class BuildServerHelloAction extends ConnectionBoundAction {
         ServerHelloMessage message = new ServerHelloMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
+        if(type_container != null) {
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.SERVER_HELLO.getValue());
+        }
         message.setProtocolVersion(version_container.get(0).getValue());
         message.setSelectedCipherSuite(suite_container.get(0).getByteValue());
         message.setUnixTime(new byte[] {0x00, 0x00}); // dummy

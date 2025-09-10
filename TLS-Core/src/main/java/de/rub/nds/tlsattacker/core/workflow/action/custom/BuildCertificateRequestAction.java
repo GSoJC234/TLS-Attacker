@@ -27,6 +27,7 @@ import java.util.Set;
 public class BuildCertificateRequestAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<byte[]> certificate_request_container = null;
     @XmlTransient private List<Integer> certificate_request_context_len = null;
 
@@ -60,19 +61,38 @@ public class BuildCertificateRequestAction extends ConnectionBoundAction {
         this.certificate_request_context_len = certificate_request_context_len;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         Context context = state.getContext(getConnectionAlias());
 
         CertificateRequestMessage message = new CertificateRequestMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(HandshakeMessageType.CERTIFICATE_REQUEST.getValue());
-        message.setCertificateRequestContext(certificate_request_container.get(0));
-        int defaultLen = message.getCertificateRequestContext().getValue().length;
-        int len = (certificate_request_context_len == null) ? defaultLen
-                : SizeCalculator.calculate(certificate_request_context_len.get(0), defaultLen, HandshakeByteLength.CERTIFICATE_REQUEST_CONTEXT_LENGTH);
-        message.setCertificateRequestContextLength(len);
-        message.setClientCertificateTypesCount(0);
+        if(type_container != null) {
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.CERTIFICATE_REQUEST.getValue());
+        }
+        if (context.getTlsContext().getSelectedProtocolVersion() == ProtocolVersion.TLS13) {
+            message.setCertificateRequestContext(certificate_request_container.get(0));
+            int defaultLen = message.getCertificateRequestContext().getValue().length;
+            int len = (certificate_request_context_len == null) ? defaultLen
+                    : SizeCalculator.calculate(certificate_request_context_len.get(0), defaultLen, HandshakeByteLength.CERTIFICATE_REQUEST_CONTEXT_LENGTH);
+            message.setCertificateRequestContextLength(len);
+            message.setClientCertificateTypesCount(0);
+        } else if (context.getTlsContext().getSelectedProtocolVersion() == ProtocolVersion.TLS12) {
+            message.setClientCertificateTypes(ClientCertificateType.ECDSA_SIGN.getArrayValue());
+            message.setClientCertificateTypesCount(1);
+
+            //message.setDistinguishedNames();
+
+            message.setSignatureHashAlgorithms(SignatureAndHashAlgorithm.ECDSA_SHA256.getByteValue());
+            message.setSignatureHashAlgorithmsLength(message.getSignatureHashAlgorithms().getValue().length);
+        }
+
         message.setExtensionsLength(0);
         message.setExtensionBytes(new byte[]{});
 

@@ -26,6 +26,7 @@ import java.util.Set;
 public class BuildEncryptedExtensionAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
 
     public BuildEncryptedExtensionAction() {
         super();
@@ -49,11 +50,19 @@ public class BuildEncryptedExtensionAction extends ConnectionBoundAction {
         this.container = container;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         EncryptedExtensionsMessage message = new EncryptedExtensionsMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(HandshakeMessageType.ENCRYPTED_EXTENSIONS.getValue());
+        if(type_container != null) {
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.ENCRYPTED_EXTENSIONS.getValue());
+        }
 
         EncryptedExtensionsSerializer serializer = new EncryptedExtensionsSerializer(message);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());

@@ -34,6 +34,7 @@ import java.util.Set;
 public class BuildCertificateAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessage> container = null;
+    @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<Integer> certificate_len = null;
     @XmlTransient private List<CertificateEntry> entry_container = null;
     @XmlTransient private List<Integer> certificate_request_context_len = null;
@@ -77,13 +78,21 @@ public class BuildCertificateAction extends ConnectionBoundAction {
         this.certificate_request_container = certificate_request_context;
     }
 
+    public void setHandshakeType(List<HandshakeMessageType> type_container){
+        this.type_container = type_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         Context context = state.getContext(getConnectionAlias());
 
         CertificateMessage message = new CertificateMessage();
         message.setShouldPrepareDefault(false);
-        message.setType(HandshakeMessageType.CERTIFICATE.getValue());
+        if(type_container != null) {
+            message.setType(type_container.get(0).getValue());
+        } else {
+            message.setType(HandshakeMessageType.CERTIFICATE.getValue());
+        }
 
         // For changing certificates later
         List<CertificateEntry> entry_list = new ArrayList<CertificateEntry>(entry_container);
