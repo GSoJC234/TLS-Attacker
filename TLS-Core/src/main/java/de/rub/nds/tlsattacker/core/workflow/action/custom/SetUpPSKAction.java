@@ -51,6 +51,7 @@ public class SetUpPSKAction extends ConnectionBoundAction {
         state.getTlsContext(getConnectionAlias()).setPsk(pskSetList.get(0).getPreSharedKey());
         state.getConfig().setUsePsk(true);
         state.getConfig().setPsk(pskSetList.get(0).getPreSharedKey());
+        setExecuted(true);
     }
 
     @Override

@@ -36,13 +36,13 @@ public class AssertEqualAction<T> extends TlsAction {
         if (!comparisonResult) {
             throw new ActionExecutionException(
                     "Assertion fails: "
-                            + "value1 -> "
+                            + "expected -> "
                             + value1.get()
-                            + ", value2 -> "
+                            + ", actual -> "
                             + value2.get());
         }
         LOGGER.info(
-                "Assertion pass: " + "value1 -> " + value1.get() + ", value2 -> " + value2.get());
+                "Assertion pass: " + "expected -> " + value1.get() + ", actual -> " + value2.get());
         setExecuted(true);
     }
 

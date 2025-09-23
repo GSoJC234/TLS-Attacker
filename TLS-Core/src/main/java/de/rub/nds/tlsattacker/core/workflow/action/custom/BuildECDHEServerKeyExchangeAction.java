@@ -18,6 +18,8 @@ import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.*;
+import de.rub.nds.tlsattacker.core.protocol.preparator.ECDHEServerKeyExchangePreparator;
+import de.rub.nds.tlsattacker.core.protocol.preparator.ServerKeyExchangePreparator;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ECDHEServerKeyExchangeSerializer;
 import de.rub.nds.tlsattacker.core.protocol.serializer.ServerKeyExchangeSerializer;
 import de.rub.nds.tlsattacker.core.state.State;
@@ -26,10 +28,10 @@ import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.core.workflow.chooser.Chooser;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -41,6 +43,7 @@ public class BuildECDHEServerKeyExchangeAction extends ConnectionBoundAction {
     @XmlTransient private List<EllipticCurveType> curve_type_container = null;
     @XmlTransient private List<NamedGroup> group_container = null;
     @XmlTransient private List<byte[]> ec_private_container = null;
+    @XmlTransient private List<byte[]> signature_key_container = null;
 
     public BuildECDHEServerKeyExchangeAction() {
         super();
@@ -80,9 +83,14 @@ public class BuildECDHEServerKeyExchangeAction extends ConnectionBoundAction {
         this.ec_private_container = ec_private_container;
     }
 
+    public void setSignatureKey(List<byte[]> signature_key_container){
+        this.signature_key_container = signature_key_container;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         ECDHEServerKeyExchangeMessage message = new ECDHEServerKeyExchangeMessage();
+        message.setShouldPrepareDefault(false);
         message.prepareKeyExchangeComputations();
         message.getKeyExchangeComputations().setEcPointFormat(ECPointFormat.UNCOMPRESSED.getValue());
 
@@ -102,10 +110,14 @@ public class BuildECDHEServerKeyExchangeAction extends ConnectionBoundAction {
             BigInteger privateKey = new BigInteger(1, ec_private_container.get(0));
             message.getKeyExchangeComputations().setPrivateKey(privateKey);
         }
+        if (signature_key_container != null) {
+            BigInteger privateKey = new BigInteger(1, signature_key_container.get(0));
+            state.getTlsContext(getConnectionAlias()).getTalkingX509Context().setSubjectEcPrivateKey(privateKey);
+        }
+        Chooser chooser = state.getTlsContext(getConnectionAlias()).getChooser();
         message.setSignatureAndHashAlgorithm(SignatureAndHashAlgorithm.ECDSA_SHA256.getByteValue());
         setPublicKey(message);
 
-        Chooser chooser = state.getTlsContext(getConnectionAlias()).getChooser();
         message.getKeyExchangeComputations()
                 .setClientServerRandom(
                         ArrayConverter.concatenate(
@@ -144,7 +156,7 @@ public class BuildECDHEServerKeyExchangeAction extends ConnectionBoundAction {
     private byte[] generateSignatureContents(ECDHEServerKeyExchangeMessage message){
         ByteArrayOutputStream ecParams = new ByteArrayOutputStream();
         try {
-            ecParams.write(message.getKeyExchangeComputations().getEcPointFormat().getValue());
+            ecParams.write(curve_type_container.get(0).getValue());
             ecParams.write(message.getNamedGroup().getValue());
             ecParams.write(message.getPublicKeyLength().getValue());
             ecParams.write(message.getPublicKey().getValue());
@@ -158,6 +170,7 @@ public class BuildECDHEServerKeyExchangeAction extends ConnectionBoundAction {
 
     private byte[] generateSignature(ECDHEServerKeyExchangeMessage message, byte[] toBeHashedAndSigned, Chooser chooser){
         TlsSignatureUtil util = new TlsSignatureUtil();
+        LOGGER.info("ToBeHashedAndSigned: " + Arrays.toString(toBeHashedAndSigned));
         util.computeSignature(
                 chooser,
                 SignatureAndHashAlgorithm.ECDSA_SHA256,
