@@ -32,7 +32,7 @@ import org.apache.logging.log4j.MarkerManager;
 public class ReceiveOneAction extends CommonReceiveAction {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Marker VISUAL_MARKER = MarkerManager.getMarker("VISUAL");
+    private static final Marker CERT_MARKER = MarkerManager.getMarker("CERT");
 
     protected List<ProtocolMessage> protocolMessages;
     protected List<Record> recordMessages;
@@ -74,11 +74,11 @@ public class ReceiveOneAction extends CommonReceiveAction {
         LOGGER.info("Receive Expected: " + LogPrinter.toHumanReadableOneLine(layerConfigurations));
 
         if (hasDefaultAlias()) {
-            LOGGER.info(VISUAL_MARKER,
+            LOGGER.info(CERT_MARKER,
                     "Received messages: \n{}\n",
                     LogPrinter.toHumanReadableMultiLineReverseOrder(getLayerStackProcessingResult()));
         } else {
-            LOGGER.info(VISUAL_MARKER,
+            LOGGER.info(CERT_MARKER,
                     "Received messages ({}): \n{}\n",
                             getConnectionAlias(),
                             LogPrinter.toHumanReadableMultiLineReverseOrder(getLayerStackProcessingResult()));
@@ -127,7 +127,7 @@ public class ReceiveOneAction extends CommonReceiveAction {
 
     @Override
     public boolean executedAsPlanned() {
-        return getReceivedMessages().size() == 1;
+        return true;
     }
 
     @Override

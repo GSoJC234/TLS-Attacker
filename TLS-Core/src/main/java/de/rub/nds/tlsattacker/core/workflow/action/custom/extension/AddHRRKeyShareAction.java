@@ -71,7 +71,6 @@ public class AddHRRKeyShareAction extends AddExtensionAction<NamedGroup> {
                 : SizeCalculator.calculate(extension_len.get(0), defaultLen, HandshakeByteLength.EXTENSION_LENGTH);
         message.setExtensionLength(len);        message.setExtensionBytes(serializer.serialize());
 
-        System.out.println("HRRKeyShareExtension: " + message);
         return message;
     }
 

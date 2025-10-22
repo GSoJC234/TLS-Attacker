@@ -68,7 +68,6 @@ public class AddSupportedVersionAction extends AddExtensionAction<ProtocolVersio
         message.setExtensionLength(len);
         message.setExtensionBytes(serializer.serialize());
 
-        System.out.println("SupportedVersionExtension: " + message);
         return message;
     }
 

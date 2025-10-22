@@ -70,7 +70,6 @@ public class AddSignatureAndHashAlgorithmAction
         message.setExtensionLength(len);
         message.setExtensionBytes(serializer.serialize());
 
-        System.out.println("SignatureAndHashAlgorithmExtension: " + message);
         return message;
     }
 

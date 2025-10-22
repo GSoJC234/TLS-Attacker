@@ -68,7 +68,6 @@ public class AddSupportedGroupAction extends AddExtensionAction<NamedGroup> {
         message.setExtensionLength(len);
         message.setExtensionBytes(serializer.serialize());
 
-        System.out.println("SupportedGroupExtension: " + message);
         return message;
     }
 

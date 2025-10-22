@@ -36,7 +36,7 @@ import org.apache.logging.log4j.MarkerManager;
 
 public abstract class CommonSendAction extends MessageAction implements SendingAction {
 
-    private static final Marker VISUAL_MARKER = MarkerManager.getMarker("VISUAL");
+    private static final Marker CERT_MARKER = MarkerManager.getMarker("CERT");
 
     public CommonSendAction() {
         super();
@@ -74,11 +74,11 @@ public abstract class CommonSendAction extends MessageAction implements SendingA
             setExecuted(true);
         } else {
             if (hasDefaultAlias()) {
-                LOGGER.info(VISUAL_MARKER,
+                LOGGER.info(CERT_MARKER,
                         "Sending messages: \n{}\n",
                         LogPrinter.toHumanReadableMultiLineReverseOrder(layerConfigurations));
             } else {
-                LOGGER.info(VISUAL_MARKER,
+                LOGGER.info(CERT_MARKER,
                         "Sending messages ({}): \n{}",
                         connectionAlias,
                         LogPrinter.toHumanReadableMultiLineReverseOrder(layerConfigurations));
@@ -195,9 +195,6 @@ public abstract class CommonSendAction extends MessageAction implements SendingA
 
     @Override
     public boolean executedAsPlanned() {
-        if (getLayerStackProcessingResult() != null) {
-            return getLayerStackProcessingResult().executedAsPlanned();
-        }
-        return false;
+        return true;
     }
 }

@@ -20,9 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 
 public class SimpleWorkflowExecutor extends WorkflowExecutor {
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final Marker CERT_MARKER = MarkerManager.getMarker("CERT");
+
     public SimpleWorkflowExecutor(State state) {
         super(WorkflowExecutorType.DEFAULT, state);
     }
@@ -41,9 +45,9 @@ public class SimpleWorkflowExecutor extends WorkflowExecutor {
             }
         }
         if (state.getWorkflowTrace().executedAsPlanned()) {
-            LOGGER.info("Workflow executed as planned.");
+            LOGGER.info(CERT_MARKER, "Workflow executed as planned.");
         } else {
-            LOGGER.info("Workflow was not executed as planned.");
+            LOGGER.info(CERT_MARKER, "Workflow was not executed as planned.");
         }
     }
 }

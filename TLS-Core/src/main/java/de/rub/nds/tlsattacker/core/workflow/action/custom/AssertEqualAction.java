@@ -24,8 +24,7 @@ import org.apache.logging.log4j.MarkerManager;
 public class AssertEqualAction<T> extends TlsAction {
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Marker VISUAL_MARKER = MarkerManager.getMarker("VISUAL");
-    private static final Marker TEST_MARKER = MarkerManager.getMarker("TEST");
+    private static final Marker CERT_MARKER = MarkerManager.getMarker("CERT");
 
 
     @XmlTransient private Supplier<T> value1;
@@ -43,7 +42,7 @@ public class AssertEqualAction<T> extends TlsAction {
     public void execute(State state) throws ActionExecutionException {
         comparisonResult = Objects.equals(value1.get(), value2.get());
         if (!comparisonResult) {
-            LOGGER.info(VISUAL_MARKER,
+            LOGGER.info(CERT_MARKER,
                     "Assertion fails: "
                             + "expected -> "
                             + value1.get()
@@ -56,7 +55,7 @@ public class AssertEqualAction<T> extends TlsAction {
                             + ", actual -> "
                             + value2.get());
         }
-        LOGGER.debug(TEST_MARKER,
+        LOGGER.info(CERT_MARKER,
                 "Assertion pass: " + "expected -> " + value1.get() + ", actual -> " + value2.get());
         setExecuted(true);
     }

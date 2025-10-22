@@ -66,7 +66,6 @@ public class AddKeyShareAction extends AddExtensionAction<KeyShareEntry> {
                 : SizeCalculator.calculate(extension_len.get(0), defaultLen, HandshakeByteLength.EXTENSION_LENGTH);
         message.setExtensionLength(len);        message.setExtensionBytes(serializer.serialize());
 
-        System.out.println("KeyShareExtension: " + message);
         return message;
     }
 

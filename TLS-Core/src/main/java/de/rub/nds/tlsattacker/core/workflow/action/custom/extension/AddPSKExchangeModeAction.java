@@ -67,7 +67,6 @@ public class AddPSKExchangeModeAction extends AddExtensionAction<PskKeyExchangeM
         message.setExtensionLength(len);
         message.setExtensionBytes(serializer.serialize());
 
-        System.out.println("PskKeyExchangeModesExtension: " + message);
         return message;
     }
 
