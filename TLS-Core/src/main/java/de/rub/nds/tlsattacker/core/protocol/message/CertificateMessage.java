@@ -111,17 +111,31 @@ public class CertificateMessage extends HandshakeMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("CertificateMessage:");
-        sb.append("\n  Certificates Length: ");
-        if (certificatesListLength != null && certificatesListLength.getValue() != null) {
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        }
+        sb.append("\n  certificateEntryLen: ");
+        if (certificatesListLength.getValue() != null && certificatesListLength.getValue() != null) {
             sb.append(certificatesListLength.getValue());
         } else {
             sb.append("null");
         }
-        sb.append("\n  Certificate:\n");
-        if (certificatesListBytes != null && certificatesListBytes.getValue() != null) {
+        sb.append("\n  certificateEntry:\n");
+        if (certificatesListBytes != null && certificatesListBytes.getValue() != null && certificatesListLength.getValue() > 0) {
             sb.append(ArrayConverter.bytesToHexString(certificatesListBytes.getValue()));
         } else {
             sb.append("null");

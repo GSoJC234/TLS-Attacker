@@ -36,6 +36,6 @@ public class MissingSendLayerConfiguration<Container extends DataContainer>
 
     @Override
     public String toCompactString() {
-        return "(" + getLayerType().getName() + ") Not configured";
+        return "";
     }
 }

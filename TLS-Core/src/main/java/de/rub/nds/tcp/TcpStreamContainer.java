@@ -68,6 +68,6 @@ public class TcpStreamContainer implements DataContainer<LayerContext> {
 
     @Override
     public String toString() {
-        return "TCP{" + data.getValue().length + " Bytes}";
+        return "";
     }
 }

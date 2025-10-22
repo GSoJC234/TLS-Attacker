@@ -26,6 +26,8 @@ import java.util.Set;
 @XmlRootElement(name = "BuildClientHelloAction")
 public class BuildClientHelloAction extends ConnectionBoundAction {
 
+
+
     @XmlTransient protected List<ProtocolMessage> container = null;
     @XmlTransient private List<HandshakeMessageType> type_container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
@@ -138,7 +140,6 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         message.setCompleteResultingMessage(serializer.serialize());
 
         container.add(message);
-        System.out.println("ClientHello: " + message);
         setExecuted(true);
     }
 

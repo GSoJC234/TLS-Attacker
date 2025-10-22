@@ -12,6 +12,7 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.modifiablevariable.util.UnformattedByteArrayAdapter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
@@ -110,5 +111,24 @@ public class PSKKeyExchangeModesExtensionMessage extends ExtensionMessage {
     @Override
     public PSKKeyExchangeModesExtensionHandler getHandler(TlsContext tlsContext) {
         return new PSKKeyExchangeModesExtensionHandler(tlsContext);
+    }
+
+    @Override
+    public String toCompactString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n  psk-key-exchange-modes:");
+        if (keyExchangeModesListBytes != null && keyExchangeModesListBytes.getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(keyExchangeModesListBytes.getValue()));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  psk-key-exchange-modes-len: ");
+        if (getExtensionLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+
+        return sb.toString();
     }
 }

@@ -280,49 +280,82 @@ public abstract class CoreClientHelloMessage extends HelloMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("ClientHelloMessage:");
-        sb.append("\n  Protocol Version: ");
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        }
+
+        sb.append("\n  protocol: ");
         if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            sb.append(ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()));
+            sb.append(ArrayConverter.bytesToHexString(getProtocolVersion().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Client Unix Time: ");
-        if (getUnixTime() != null && getUnixTime().getValue() != null) {
-            sb.append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  Client Random: ");
+        sb.append("\n  random: ");
         if (getRandom() != null && getRandom().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getRandom().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Session ID: ");
-        if (getSessionId() != null && getSessionId().getValue() != null) {
+        sb.append("\n  sessionID: ");
+        if (getSessionId() != null && getSessionId().getValue() != null && getSessionIdLength().getValue() > 0) {
             sb.append(ArrayConverter.bytesToHexString(getSessionId().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Supported Cipher Suites: ");
+        sb.append("\n  sessionIDLen: ");
+        if (getSessionIdLength() != null && getSessionIdLength().getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getSessionIdLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  cipherSuites: ");
         if (getCipherSuites() != null && getCipherSuites().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getCipherSuites().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Supported Compression Methods: ");
+        sb.append("\n  cipherSuitesLen: ");
+        if (getCipherSuiteLength() != null && getCipherSuiteLength().getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getCipherSuiteLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  compression: ");
         if (getCompressions() != null && getCompressions().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getCompressions().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Extensions: ");
+        sb.append("\n  compressionLen: ");
+        if (getCompressionLength() != null && getCompressionLength().getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getCompressionLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  extensionLen: ");
+        if (getExtensionsLength() != null && getExtensionsLength().getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getExtensionsLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  extension: ");
         if (getExtensions() != null) {
             for (ExtensionMessage extension : getExtensions()) {
-                sb.append(extension.toString()).append("\n");
+                sb.append(extension.toCompactString());
             }
         } else {
             sb.append("null");

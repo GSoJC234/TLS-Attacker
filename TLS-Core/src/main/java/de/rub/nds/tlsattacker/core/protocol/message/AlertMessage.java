@@ -11,6 +11,7 @@ package de.rub.nds.tlsattacker.core.protocol.message;
 import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.modifiablevariable.util.UnformattedByteArrayAdapter;
 import de.rub.nds.tlsattacker.core.constants.AlertDescription;
 import de.rub.nds.tlsattacker.core.constants.AlertLevel;
@@ -86,24 +87,15 @@ public class AlertMessage extends ProtocolMessage {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("AlertMessage:");
-        sb.append("\n  Level: ");
+        sb.append("\n  alertLev: ");
         if (level != null) {
-            if (AlertLevel.getAlertLevel(level.getValue()) == AlertLevel.UNDEFINED) {
-                sb.append(level.getValue());
-            } else {
-                sb.append(AlertLevel.getAlertLevel(level.getValue()));
-            }
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{level.getValue()}));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Description: ");
+        sb.append("\n  alertDesc: ");
         if (description != null) {
-            if (AlertDescription.getAlertDescription(description.getValue()) == null) {
-                sb.append(description.getValue());
-            } else {
-                sb.append(AlertDescription.getAlertDescription(description.getValue()));
-            }
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{description.getValue()}));
         } else {
             sb.append("null");
         }
@@ -112,35 +104,7 @@ public class AlertMessage extends ProtocolMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        String levelString;
-        String descriptionString;
-        if (level != null && level.getValue() != null) {
-            levelString = AlertLevel.getAlertLevel(level.getValue()).name();
-        } else {
-            levelString = "null";
-        }
-        if (description != null && description.getValue() != null) {
-            AlertDescription desc = AlertDescription.getAlertDescription(description.getValue());
-            if (desc != null) {
-                descriptionString = desc.name();
-            } else {
-                descriptionString = "" + description.getValue();
-            }
-        } else {
-            if (config != null && config.length == 2) {
-                AlertDescription desc = AlertDescription.getAlertDescription((byte) config[1]);
-                if (desc != null) {
-                    descriptionString = desc.name();
-                } else {
-                    descriptionString = "" + config[1];
-                }
-            } else {
-                descriptionString = "null";
-            }
-        }
-        sb.append("Alert(").append(levelString).append(",").append(descriptionString).append(")");
-        return sb.toString();
+        return this.toString();
     }
 
     @Override

@@ -12,6 +12,7 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.ECPointFormatExtensionHandler;
@@ -78,5 +79,24 @@ public class ECPointFormatExtensionMessage extends ExtensionMessage {
     @Override
     public ECPointFormatExtensionHandler getHandler(TlsContext tlsContext) {
         return new ECPointFormatExtensionHandler(tlsContext);
+    }
+
+    @Override
+    public String toCompactString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n  ecPointFormat: ");
+        if (this.pointFormats != null && pointFormats.getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(pointFormats.getValue()));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  ecPointFormat-len: ");
+        if (getExtensionLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+
+        return sb.toString();
     }
 }

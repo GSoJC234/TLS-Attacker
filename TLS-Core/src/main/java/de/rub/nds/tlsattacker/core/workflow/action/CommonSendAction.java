@@ -31,8 +31,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 
 public abstract class CommonSendAction extends MessageAction implements SendingAction {
+
+    private static final Marker VISUAL_MARKER = MarkerManager.getMarker("VISUAL");
 
     public CommonSendAction() {
         super();
@@ -70,14 +74,14 @@ public abstract class CommonSendAction extends MessageAction implements SendingA
             setExecuted(true);
         } else {
             if (hasDefaultAlias()) {
-                LOGGER.info(
-                        "Sending messages: {}",
-                        LogPrinter.toHumanReadableOneLine(layerConfigurations));
+                LOGGER.info(VISUAL_MARKER,
+                        "Sending messages: \n{}\n",
+                        LogPrinter.toHumanReadableMultiLineReverseOrder(layerConfigurations));
             } else {
-                LOGGER.info(
-                        "Sending messages ({}): {}",
+                LOGGER.info(VISUAL_MARKER,
+                        "Sending messages ({}): \n{}",
                         connectionAlias,
-                        LogPrinter.toHumanReadableOneLine(layerConfigurations));
+                        LogPrinter.toHumanReadableMultiLineReverseOrder(layerConfigurations));
             }
             try {
                 getSendResult(tlsContext.getLayerStack(), layerConfigurations);

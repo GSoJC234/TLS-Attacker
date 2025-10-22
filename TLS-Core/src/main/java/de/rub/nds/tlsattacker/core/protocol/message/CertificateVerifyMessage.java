@@ -95,22 +95,38 @@ public class CertificateVerifyMessage extends HandshakeMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("CertificateVerifyMessage:");
-        builder.append("\n  SignatureAndHashAlgorithm: ");
+        builder.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            builder.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            builder.append("null");
+        }
+        builder.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            builder.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        } else {
+            builder.append("null");
+        }
+        builder.append("\n  certificate-verify-algorithm: ");
         if (signatureHashAlgorithm != null && signatureHashAlgorithm.getValue() != null) {
             builder.append(ArrayConverter.bytesToHexString(signatureHashAlgorithm.getValue()));
         } else {
             builder.append("null");
         }
-        builder.append("\n  Signature Length: ");
+        builder.append("\n  signature-len: ");
         if (signatureLength != null && signatureLength.getValue() != null) {
             builder.append(signatureLength.getValue());
         } else {
             builder.append("null");
         }
-        builder.append("\n  Signature: ");
+        builder.append("\n  signature: ");
         if (signature != null && signature.getValue() != null) {
             builder.append(ArrayConverter.bytesToHexString(signature.getValue()));
         } else {

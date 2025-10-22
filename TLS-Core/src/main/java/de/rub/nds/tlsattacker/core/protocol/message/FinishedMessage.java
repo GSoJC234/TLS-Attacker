@@ -45,10 +45,26 @@ public class FinishedMessage extends HandshakeMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("FinishedMessage:");
-        sb.append("\n  Verify Data: ");
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  verifyData: ");
         if (verifyData != null && verifyData.getOriginalValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(verifyData.getValue()));
         } else {

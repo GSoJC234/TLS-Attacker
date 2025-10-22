@@ -12,6 +12,7 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ClientCertificateType;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
@@ -193,10 +194,25 @@ public class CertificateRequestMessage extends HandshakeMessage {
                         this.certificateRequestContext, certificateRequestContext);
     }
 
+
+    @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("CertificateRequestMessage:");
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        }
         sb.append("\n  Certificate Types Count: ");
         if (clientCertificateTypesCount != null && clientCertificateTypesCount.getValue() != null) {
             sb.append(clientCertificateTypesCount.getValue());

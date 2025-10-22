@@ -47,11 +47,13 @@ public class SpecificSendLayerConfiguration<Container extends DataContainer>
 
     @Override
     public String toCompactString() {
-        return "("
-                + getLayerType().getName()
-                + ") Send:"
+        if (getLayerType().getName().equals("TCP")){
+            return "";
+        }
+        return  "\n  LayerType: " +
+                getLayerType().getName()
                 + getContainerList().stream()
                         .map(DataContainer::toCompactString)
-                        .collect(Collectors.joining(","));
+                        .collect(Collectors.joining(", "));
     }
 }

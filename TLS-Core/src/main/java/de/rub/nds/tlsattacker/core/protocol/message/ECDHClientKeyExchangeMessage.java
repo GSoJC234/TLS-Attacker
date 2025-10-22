@@ -10,6 +10,7 @@ package de.rub.nds.tlsattacker.core.protocol.message;
 
 import de.rub.nds.modifiablevariable.HoldsModifiableVariable;
 import de.rub.nds.modifiablevariable.ModifiableVariableHolder;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.handler.ECDHClientKeyExchangeHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.computations.ECDHClientComputations;
@@ -30,9 +31,26 @@ public class ECDHClientKeyExchangeMessage extends ClientKeyExchangeMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("ECDHClientKeyExchangeMessage:");
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        } else {
+            sb.append("null");
+        }
+        sb.append(" computations: " + computations);
         return sb.toString();
     }
 
@@ -59,16 +77,6 @@ public class ECDHClientKeyExchangeMessage extends ClientKeyExchangeMessage {
     @Override
     public ECDHClientKeyExchangeSerializer getSerializer(TlsContext tlsContext) {
         return new ECDHClientKeyExchangeSerializer(this);
-    }
-
-    @Override
-    public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("ECDH_CLIENT_KEY_EXCHANGE");
-        if (isRetransmission()) {
-            sb.append(" (ret.)");
-        }
-        return sb.toString();
     }
 
     @Override

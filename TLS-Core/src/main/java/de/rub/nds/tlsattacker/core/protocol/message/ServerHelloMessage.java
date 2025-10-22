@@ -364,12 +364,98 @@ public class ServerHelloMessage extends HelloMessage {
 
     @Override
     public String toCompactString() {
-        Boolean isHrr = isTls13HelloRetryRequest();
-        String compactString = super.toCompactString();
-        if (isHrr != null && isHrr == true) {
-            compactString += "(HRR)";
+        StringBuilder sb = new StringBuilder(super.toString());
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
         }
-        return compactString;
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  protocol: ");
+        if (getProtocolVersion() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getProtocolVersion().getValue()));
+        } else {
+            sb.append("null");
+        }
+//        if (getProtocolVersion() != null
+//                && getProtocolVersion().getValue() != null
+//                && !ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
+//            sb.append("\n  Server Unix Time: ")
+//                    .append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
+//        }
+//        sb.append("\n  Server Unix Time: ");
+//        if (getProtocolVersion() != null) {
+//            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
+//                sb.append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
+//            } else {
+//                sb.append("null");
+//            }
+//        } else {
+//            sb.append("null");
+//        }
+        sb.append("\n  random: ");
+        if (getRandom() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getRandom().getValue()));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  sessionID: ");
+        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
+            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13() && getSessionIdLength().getValue() > 0) {
+                sb.append(ArrayConverter.bytesToHexString(getSessionId().getValue()));
+            } else {
+                sb.append("null");
+            }
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  sessionIDLen: ");
+        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
+            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
+                sb.append(ArrayConverter.bytesToHexString(getSessionIdLength().getByteArray(2)));
+            } else {
+                sb.append("null");
+            }
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  cipherSuites: ");
+        if (selectedCipherSuite != null && selectedCipherSuite.getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(selectedCipherSuite.getValue()));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  compression: ");
+        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
+            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
+                sb.append(ArrayConverter.bytesToHexString(new byte[]{selectedCompressionMethod.getValue()}));
+            } else {
+                sb.append("null");
+            }
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  extensionLen: ");
+        if (getExtensions() == null) {
+            sb.append("null");
+        } else {
+            sb.append(ArrayConverter.bytesToHexString(getExtensionsLength().getByteArray(2)));
+        }
+        sb.append("\n  extension: ");
+        if (getExtensions() == null) {
+            sb.append("null");
+        } else {
+            for (ExtensionMessage e : getExtensions()) {
+                sb.append(e.toCompactString());
+            }
+        }
+        return sb.toString();
     }
 
     @Override

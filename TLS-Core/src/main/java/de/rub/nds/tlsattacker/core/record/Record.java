@@ -291,28 +291,26 @@ public class Record extends ModifiableVariableHolder implements DataContainer<Tl
 
     @Override
     public String toCompactString() {
-        String stringContentType = "unspecified";
-        String stringProtocolVersion = "unspecified";
-        String stringLength = "unspecified";
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n  contentType: ");
         if (contentType != null) {
-            stringContentType = contentType.getValue().toString();
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{contentType.getValue()}));
+        } else {
+            sb.append("null");
         }
+        sb.append("\n  version: ");
         if (protocolVersion != null) {
-            stringContentType = ArrayConverter.bytesToHexString(protocolVersion.getValue());
+            sb.append(ArrayConverter.bytesToHexString(protocolVersion.getValue()));
+        } else {
+            sb.append("null");
         }
+        sb.append("\n  recordLen: ");
         if (length != null) {
-            stringLength = length.getValue().toString();
-        } else if (maxRecordLengthConfig != null) {
-            stringLength = maxRecordLengthConfig.toString();
+            sb.append(ArrayConverter.bytesToHexString(length.getByteArray(2)));
+        } else {
+            sb.append("null");
         }
-        return "Record{"
-                + "contentType="
-                + stringContentType
-                + ", protocolVersion="
-                + stringProtocolVersion
-                + ", length="
-                + stringLength
-                + '}';
+        return sb.toString();
     }
 
     @Override

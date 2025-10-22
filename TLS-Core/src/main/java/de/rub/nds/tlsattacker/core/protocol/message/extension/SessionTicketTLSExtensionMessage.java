@@ -9,6 +9,7 @@
 package de.rub.nds.tlsattacker.core.protocol.message.extension;
 
 import de.rub.nds.modifiablevariable.HoldsModifiableVariable;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.SessionTicketTLSExtensionHandler;
@@ -57,5 +58,10 @@ public class SessionTicketTLSExtensionMessage extends ExtensionMessage {
     @Override
     public SessionTicketTLSExtensionHandler getHandler(TlsContext tlsContext) {
         return new SessionTicketTLSExtensionHandler(tlsContext);
+    }
+
+    @Override
+    public String toCompactString() {
+        return "";
     }
 }

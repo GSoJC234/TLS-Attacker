@@ -25,11 +25,15 @@ import java.util.LinkedList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 
 @XmlRootElement(name = "ReceiveOne")
 public class ReceiveOneAction extends CommonReceiveAction {
 
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final Marker VISUAL_MARKER = MarkerManager.getMarker("VISUAL");
+
     protected List<ProtocolMessage> protocolMessages;
     protected List<Record> recordMessages;
 
@@ -59,11 +63,9 @@ public class ReceiveOneAction extends CommonReceiveAction {
     public void execute(State state) throws ActionExecutionException {
         TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
         tlsContext.getConnection().setTimeout(100000);
-
         if (isExecuted()) {
             throw new ActionExecutionException("Action already executed!");
         }
-
         LOGGER.info("Receiving... (" + this.getClass().getSimpleName() + ")");
         List<LayerConfiguration<?>> layerConfigurations = createLayerConfiguration(state);
         LayerStackProcessingResult result =
@@ -72,24 +74,21 @@ public class ReceiveOneAction extends CommonReceiveAction {
         LOGGER.info("Receive Expected: " + LogPrinter.toHumanReadableOneLine(layerConfigurations));
 
         if (hasDefaultAlias()) {
-            LOGGER.info(
-                    "Received Messages: "
-                            + LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
+            LOGGER.info(VISUAL_MARKER,
+                    "Received messages: \n{}\n",
+                    LogPrinter.toHumanReadableMultiLineReverseOrder(getLayerStackProcessingResult()));
         } else {
-            LOGGER.info(
-                    "Received Messages ("
-                            + getConnectionAlias()
-                            + "): "
-                            + LogPrinter.toHumanReadableMultiLine(getLayerStackProcessingResult()));
+            LOGGER.info(VISUAL_MARKER,
+                    "Received messages ({}): \n{}\n",
+                            getConnectionAlias(),
+                            LogPrinter.toHumanReadableMultiLineReverseOrder(getLayerStackProcessingResult()));
         }
 
         if(! getReceivedMessages().isEmpty()){
             for (ProtocolMessage message : getReceivedMessages()) {
                 message.setShouldPrepareDefault(false);
                 protocolMessages.add(message);
-                System.out.println("Received message: " + message);
             }
-
             for (Record record : getReceivedRecords()) {
                 record.setShouldPrepare(false);
                 recordMessages.add(record);

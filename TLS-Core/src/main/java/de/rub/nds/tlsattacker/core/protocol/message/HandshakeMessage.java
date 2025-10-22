@@ -16,6 +16,7 @@ import de.rub.nds.modifiablevariable.bool.ModifiableBoolean;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
@@ -237,21 +238,7 @@ public abstract class HandshakeMessage extends ProtocolMessage {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("HandshakeMessage:");
-        sb.append("\n  Type: ");
-        if (type != null && type.getValue() != null) {
-            sb.append(type.getValue());
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  Length: ");
-        if (length != null && length.getValue() != null) {
-            sb.append("\n  Length: ").append(length.getValue());
-        } else {
-            sb.append("null");
-        }
-        return sb.toString();
+        return "";
     }
 
     @Override

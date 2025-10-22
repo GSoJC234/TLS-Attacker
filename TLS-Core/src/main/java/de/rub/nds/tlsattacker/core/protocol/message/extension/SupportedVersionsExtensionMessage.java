@@ -12,6 +12,7 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.SupportedVersionsExtensionHandler;
@@ -78,5 +79,23 @@ public class SupportedVersionsExtensionMessage extends ExtensionMessage {
     @Override
     public SupportedVersionsExtensionHandler getHandler(TlsContext tlsContext) {
         return new SupportedVersionsExtensionHandler(tlsContext);
+    }
+
+    @Override
+    public String toCompactString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n  supported-versions: ");
+        if (supportedVersions != null && supportedVersions.getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(supportedVersions.getValue()));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  supported-versions-len: ");
+        if (getExtensionLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+        return sb.toString();
     }
 }

@@ -12,6 +12,7 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
+import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.SignatureAndHashAlgorithmsExtensionHandler;
@@ -82,5 +83,23 @@ public class SignatureAndHashAlgorithmsExtensionMessage extends ExtensionMessage
     @Override
     public SignatureAndHashAlgorithmsExtensionHandler getHandler(TlsContext tlsContext) {
         return new SignatureAndHashAlgorithmsExtensionHandler(tlsContext);
+    }
+    @Override
+    public String toCompactString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n  signature-algorithms:");
+        if (signatureAndHashAlgorithms != null && signatureAndHashAlgorithms.getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(signatureAndHashAlgorithms.getValue()));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  signature-algorithms-len: ");
+        if (getExtensionLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
+        } else {
+            sb.append("null");
+        }
+
+        return sb.toString();
     }
 }

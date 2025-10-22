@@ -84,19 +84,17 @@ public class LayerProcessingResult<T extends DataContainer> {
     }
 
     public String toCompactString() {
+        if (layerType.getName().equals("TCP")){
+            return "";
+        }
         StringBuilder sb = new StringBuilder();
         sb.append("LayerType: ");
         sb.append(layerType);
-        sb.append(" As Planned: ");
-        sb.append(executedAsPlanned);
-        sb.append(" Containers: ");
         StringJoiner joiner = new StringJoiner(", ");
         for (DataContainer container : usedContainers) {
             joiner.add(container.toCompactString());
         }
         sb.append(joiner.toString());
-        sb.append(" UnreadBytes: ");
-        sb.append(unreadBytes.length);
         return sb.toString();
     }
 }

@@ -66,9 +66,25 @@ public class ECDHEServerKeyExchangeMessage extends ServerKeyExchangeMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("ECDHEServerKeyExchangeMessage:");
+        sb.append("\n  handshakeType: ");
+        if (getHandshakeMessageType() != null) {
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  handshakeLen: ");
+        if (getLength() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
+        } else {
+            sb.append("null");
+        }
         sb.append("\n  Curve Type: ");
         if (curveType != null && curveType.getValue() != null) {
             sb.append(EllipticCurveType.getCurveType(this.curveType.getValue()));
@@ -130,16 +146,6 @@ public class ECDHEServerKeyExchangeMessage extends ServerKeyExchangeMessage {
     public ECDHEServerKeyExchangeSerializer getSerializer(TlsContext tlsContext) {
         return new ECDHEServerKeyExchangeSerializer(
                 this, tlsContext.getChooser().getSelectedProtocolVersion());
-    }
-
-    @Override
-    public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("ECDHE_SERVER_KEY_EXCHANGE");
-        if (isRetransmission()) {
-            sb.append(" (ret.)");
-        }
-        return sb.toString();
     }
 
     @Override

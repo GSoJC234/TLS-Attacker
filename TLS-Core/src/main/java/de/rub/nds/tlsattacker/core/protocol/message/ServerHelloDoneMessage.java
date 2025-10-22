@@ -44,10 +44,16 @@ public class ServerHelloDoneMessage extends HandshakeMessage {
         return new ServerHelloDoneSerializer(this);
     }
 
+
+    @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("ServerHelloDoneMessage:");
+        sb.append("\n  ServerHelloDone:");
         return sb.toString();
     }
 

@@ -46,9 +46,13 @@ public class ChangeCipherSpecMessage extends ProtocolMessage {
     }
 
     @Override
+    public String toCompactString() {
+        return this.toString();
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("ChangeCipherSpecMessage:");
         sb.append("\n  CCS ProtocolType: ");
         if (ccsProtocolType != null && ccsProtocolType.getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(ccsProtocolType.getValue()));
@@ -61,11 +65,6 @@ public class ChangeCipherSpecMessage extends ProtocolMessage {
     @Override
     public String toShortString() {
         return "CCS";
-    }
-
-    @Override
-    public String toCompactString() {
-        return "CHANGE_CIPHER_SPEC";
     }
 
     @Override

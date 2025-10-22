@@ -12,12 +12,16 @@ import de.rub.nds.tlsattacker.core.layer.LayerConfiguration;
 import de.rub.nds.tlsattacker.core.layer.LayerProcessingResult;
 import de.rub.nds.tlsattacker.core.layer.LayerStackProcessingResult;
 import de.rub.nds.tlsattacker.core.layer.data.DataContainer;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.StringJoiner;
 
 public class LogPrinter {
 
     private LogPrinter() {}
+
+
 
     public static String toHumanReadableOneLine(List<LayerConfiguration<?>> layerConfigurations) {
         StringBuilder stringBuilder = new StringBuilder();
@@ -37,11 +41,40 @@ public class LogPrinter {
         return stringBuilder.toString().trim();
     }
 
+    public static String toHumanReadableMultiLineReverseOrder(List<LayerConfiguration<?>> layerConfigurations) {
+        StringBuilder stringBuilder = new StringBuilder();
+        List<String> layerStrings = new LinkedList<>();
+
+        for (LayerConfiguration<?> layerConfiguration : layerConfigurations) {
+            layerStrings.add(0, layerConfiguration.toCompactString());
+            layerStrings.add(1, " ");
+        }
+        for (String layerString : layerStrings) {
+            stringBuilder.append(layerString);
+        }
+        return stringBuilder.toString().trim();
+    }
+
     public static String toHumanReadableMultiLine(LayerStackProcessingResult processingResult) {
         StringBuilder stringBuilder = new StringBuilder();
         for (LayerProcessingResult<?> result : processingResult.getLayerProcessingResultList()) {
             stringBuilder.append(result.toCompactString());
             stringBuilder.append(System.lineSeparator());
+        }
+        stringBuilder.trimToSize();
+        return stringBuilder.toString();
+    }
+
+    public static String toHumanReadableMultiLineReverseOrder(LayerStackProcessingResult processingResult) {
+        StringBuilder stringBuilder = new StringBuilder();
+        List<String> layerStrings = new LinkedList<>();
+
+        for (LayerProcessingResult<?> result : processingResult.getLayerProcessingResultList()) {
+            layerStrings.add(0, result.toCompactString());
+            layerStrings.add(1, System.lineSeparator());
+        }
+        for (String layerString : layerStrings) {
+            stringBuilder.append(layerString);
         }
         stringBuilder.trimToSize();
         return stringBuilder.toString();

@@ -87,7 +87,13 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         Context context = state.getContext(getConnectionAlias());
 
         BigInteger privateKey = new BigInteger(1, this.certificatePrivateKey_container.get(0));
-        SignatureAndHashAlgorithm algorithm = signature_and_hash_algorithm_container.get(0);
+        SignatureAndHashAlgorithm algorithm;
+        if(signature_and_hash_algorithm_container != null){
+            algorithm = signature_and_hash_algorithm_container.get(0);
+        } else {
+            algorithm = context.getChooser().getSelectedSigHashAlgorithm();
+        }
+
         context.getTlsContext().setSelectedSignatureAndHashAlgorithm(algorithm);
 
         ConnectionEndType endType = context.getConnection().getLocalConnectionEndType();

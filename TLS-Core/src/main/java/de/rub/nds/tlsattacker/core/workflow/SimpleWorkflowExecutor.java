@@ -9,16 +9,20 @@
 package de.rub.nds.tlsattacker.core.workflow;
 
 import de.rub.nds.tlsattacker.core.exceptions.SkipActionException;
+import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.state.State;
+import de.rub.nds.tlsattacker.core.workflow.action.SendAction;
 import de.rub.nds.tlsattacker.core.workflow.action.TlsAction;
+import de.rub.nds.tlsattacker.core.workflow.action.custom.ReceiveOneAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.WorkflowExecutorType;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class SimpleWorkflowExecutor extends WorkflowExecutor {
     private static final Logger LOGGER = LogManager.getLogger();
-
     public SimpleWorkflowExecutor(State state) {
         super(WorkflowExecutorType.DEFAULT, state);
     }
