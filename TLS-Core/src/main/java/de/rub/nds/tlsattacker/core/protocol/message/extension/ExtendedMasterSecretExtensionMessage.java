@@ -51,4 +51,8 @@ public class ExtendedMasterSecretExtensionMessage extends ExtensionMessage {
     public ExtendedMasterSecretExtensionHandler getHandler(TlsContext tlsContext) {
         return new ExtendedMasterSecretExtensionHandler(tlsContext);
     }
+    @Override
+    public String toCompactString() {
+        return "";
+    }
 }

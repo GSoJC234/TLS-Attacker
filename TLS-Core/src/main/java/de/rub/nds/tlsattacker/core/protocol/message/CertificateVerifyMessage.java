@@ -122,7 +122,7 @@ public class CertificateVerifyMessage extends HandshakeMessage {
         }
         builder.append("\n  signature-len: ");
         if (signatureLength != null && signatureLength.getValue() != null) {
-            builder.append(signatureLength.getValue());
+            builder.append(ArrayConverter.bytesToHexString(signatureLength.getByteArray(3)));
         } else {
             builder.append("null");
         }

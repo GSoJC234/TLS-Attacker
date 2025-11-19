@@ -213,57 +213,43 @@ public class CertificateRequestMessage extends HandshakeMessage {
         if (getLength() != null) {
             sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
         }
-        sb.append("\n  Certificate Types Count: ");
+        sb.append("\n  certificateTypesLen: ");
         if (clientCertificateTypesCount != null && clientCertificateTypesCount.getValue() != null) {
             sb.append(clientCertificateTypesCount.getValue());
         } else {
             sb.append("null");
         }
-        sb.append("\n  Certificate Types: ");
+        sb.append("\n  certificateTypes: ");
         if (clientCertificateTypes != null && clientCertificateTypes.getValue() != null) {
-            for (int i = 0; i < clientCertificateTypes.getValue().length; i++) {
-                sb.append(
-                                ClientCertificateType.getClientCertificateType(
-                                        clientCertificateTypes.getValue()[i]))
-                        .append(", ");
-            }
+            sb.append(ArrayConverter.bytesToHexString(clientCertificateTypes.getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Signature Hash Algorithms Length: ");
+        sb.append("\n  signature-algorithms-len: ");
         if (signatureHashAlgorithmsLength != null
                 && signatureHashAlgorithmsLength.getValue() != null) {
-            sb.append(signatureHashAlgorithmsLength.getValue());
+            sb.append(ArrayConverter.bytesToHexString(signatureHashAlgorithmsLength.getByteArray(2)));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Signature Hash Algorithms: ");
+        sb.append("\n  signature-algorithms: ");
         if (signatureHashAlgorithms != null && signatureHashAlgorithms.getValue() != null) {
-            try {
-                List<SignatureAndHashAlgorithm> signatureAndHashAlgorithms =
-                        SignatureAndHashAlgorithm.getSignatureAndHashAlgorithms(
-                                signatureHashAlgorithms.getValue());
-                for (SignatureAndHashAlgorithm algo : signatureAndHashAlgorithms) {
-                    sb.append(algo.name());
-                    sb.append(", ");
-                }
-            } catch (Exception e) {
-                LOGGER.debug(e);
-                LOGGER.debug(
-                        "Signature and HashAlgorithms contain unparseable Algorithms: {}",
-                        signatureHashAlgorithms);
-            }
+            sb.append(ArrayConverter.bytesToHexString(signatureHashAlgorithms.getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Distinguished Names Length: ");
+        sb.append("\n  distinguishedNamesLen: ");
         if (distinguishedNamesLength != null && distinguishedNamesLength.getValue() != null) {
-            sb.append(distinguishedNamesLength.getValue());
+            sb.append(ArrayConverter.bytesToHexString(distinguishedNamesLength.getByteArray(2)));
         } else {
             sb.append("null");
         }
-        // sb.append("\n Distinguished Names: ").append(ArrayConverter
-        // .bytesToHexString(distinguishedNames.getValue()));
+        sb.append("\n  distinguishedNames: ");
+        if (distinguishedNames != null && distinguishedNames.getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(distinguishedNames.getValue()));
+        } else {
+            sb.append("null");
+        }
         return sb.toString();
     }
 

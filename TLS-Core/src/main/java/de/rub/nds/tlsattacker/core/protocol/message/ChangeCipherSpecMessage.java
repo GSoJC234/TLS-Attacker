@@ -53,7 +53,7 @@ public class ChangeCipherSpecMessage extends ProtocolMessage {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\n  CCS ProtocolType: ");
+        sb.append("\n  changeCipherSpecType: ");
         if (ccsProtocolType != null && ccsProtocolType.getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(ccsProtocolType.getValue()));
         } else {

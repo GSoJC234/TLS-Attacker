@@ -130,7 +130,7 @@ public class CertificateMessage extends HandshakeMessage {
         }
         sb.append("\n  certificateEntryLen: ");
         if (certificatesListLength.getValue() != null && certificatesListLength.getValue() != null) {
-            sb.append(certificatesListLength.getValue());
+            sb.append(ArrayConverter.bytesToHexString(certificatesListLength.getByteArray(3)));
         } else {
             sb.append("null");
         }

@@ -50,7 +50,14 @@ public class ECDHClientKeyExchangeMessage extends ClientKeyExchangeMessage {
         } else {
             sb.append("null");
         }
-        sb.append(" computations: " + computations);
+        sb.append("\n  publicKeyX: ");
+        if(computations.getPublicKeyX() != null) {
+            sb.append(ArrayConverter.bytesToHexString(computations.getPublicKeyX().getByteArray()));
+        }
+        sb.append("\n publicKeyY: ");
+        if(computations.getPublicKeyY() != null) {
+            sb.append(ArrayConverter.bytesToHexString(computations.getPublicKeyY().getByteArray()));
+        }
         return sb.toString();
     }
 

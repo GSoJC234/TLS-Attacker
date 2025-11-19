@@ -85,25 +85,25 @@ public class ECDHEServerKeyExchangeMessage extends ServerKeyExchangeMessage {
         } else {
             sb.append("null");
         }
-        sb.append("\n  Curve Type: ");
+        sb.append("\n  curveType: ");
         if (curveType != null && curveType.getValue() != null) {
-            sb.append(EllipticCurveType.getCurveType(this.curveType.getValue()));
+            sb.append(ArrayConverter.bytesToHexString(new byte[]{this.curveType.getValue()}));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Named Curve: ");
+        sb.append("\n  elliptic-curves: ");
         if (namedGroup != null && namedGroup.getValue() != null) {
-            sb.append(NamedGroup.getNamedGroup(this.namedGroup.getValue()));
+            sb.append(ArrayConverter.bytesToHexString(this.namedGroup.getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Public Key: ");
+        sb.append("\n  publicKey: ");
         if (getPublicKey() != null && getPublicKey().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getPublicKey().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  Signature and Hash Algorithm: ");
+        sb.append("\n  signature-algorithms: ");
         // signature and hash algorithms are provided only while working with
         // (D)TLS 1.2
         if (this.getSignatureAndHashAlgorithm() != null
@@ -112,7 +112,7 @@ public class ECDHEServerKeyExchangeMessage extends ServerKeyExchangeMessage {
         } else {
             sb.append("null");
         }
-        sb.append("\n  Signature: ");
+        sb.append("\n  signature: ");
         if (getSignature() != null && getSignature().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getSignature().getValue()));
         } else {
