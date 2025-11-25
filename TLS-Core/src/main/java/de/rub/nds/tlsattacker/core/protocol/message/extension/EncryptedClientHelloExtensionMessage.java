@@ -165,4 +165,8 @@ public class EncryptedClientHelloExtensionMessage extends ExtensionMessage {
                 ModifiableVariableFactory.safelySetValue(
                         this.acceptConfirmation, acceptConfirmation);
     }
+    @Override
+    public String toCompactString() {
+        return "";
+    }
 }
