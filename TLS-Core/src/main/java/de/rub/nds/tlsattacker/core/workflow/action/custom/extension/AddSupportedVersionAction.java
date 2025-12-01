@@ -22,11 +22,14 @@ import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @XmlRootElement(name = "AddSupportedVersionAction")
 public class AddSupportedVersionAction extends AddExtensionAction<ProtocolVersion> {
+
+    private static final int LONG_PROTOCOL_VERSION_LEN = 127;
 
     public AddSupportedVersionAction() {
         super();
@@ -53,8 +56,21 @@ public class AddSupportedVersionAction extends AddExtensionAction<ProtocolVersio
         SupportedVersionsExtensionMessage message = new SupportedVersionsExtensionMessage();
         message.setExtensionType(ExtensionType.SUPPORTED_VERSIONS.getValue());
 
-        List<ProtocolVersion> protocolVersionList = extension_container;
+
+        List<ProtocolVersion> protocolVersionList = null;
+        if (super.longExtension){
+            protocolVersionList = new ArrayList<>();
+            for(int i = 0; i < extension_container.size() - 1; i++){
+                protocolVersionList.add(extension_container.get(i));
+            }
+            for (int i = 0 ; protocolVersionList.size() < LONG_PROTOCOL_VERSION_LEN ; i ++) {
+                protocolVersionList.add(extension_container.get(extension_container.size() - 1));
+            }
+        } else {
+            protocolVersionList = extension_container;
+        }
         message.setSupportedVersions(serializeProtocolVersion(protocolVersionList));
+
         if (endType == ConnectionEndType.CLIENT) {
             message.setSupportedVersionsLength(message.getSupportedVersions().getValue().length);
         }

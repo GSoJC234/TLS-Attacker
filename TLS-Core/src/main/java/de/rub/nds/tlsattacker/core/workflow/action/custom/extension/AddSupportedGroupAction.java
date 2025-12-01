@@ -11,6 +11,7 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom.extension;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
 import de.rub.nds.tlsattacker.core.constants.NamedGroup;
+import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.EllipticCurvesExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
@@ -22,11 +23,14 @@ import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @XmlRootElement(name = "AddSupportedGroupAction")
 public class AddSupportedGroupAction extends AddExtensionAction<NamedGroup> {
+
+    private static final int LONG_GROUP_LEN = 2000;
 
     public AddSupportedGroupAction() {
         super();
@@ -55,7 +59,19 @@ public class AddSupportedGroupAction extends AddExtensionAction<NamedGroup> {
         EllipticCurvesExtensionMessage message = new EllipticCurvesExtensionMessage();
         message.setExtensionType(ExtensionType.ELLIPTIC_CURVES.getValue());
 
-        List<NamedGroup> namedGroupList = extension_container;
+        List<NamedGroup> namedGroupList = null;
+        if (super.longExtension){
+            namedGroupList = new ArrayList<>();
+            for(int i = 0; i < extension_container.size() - 1; i++){
+                namedGroupList.add(extension_container.get(i));
+            }
+            for (int i = 0 ; i < LONG_GROUP_LEN; i ++) {
+                namedGroupList.add(extension_container.get(extension_container.size() - 1));
+            }
+        } else {
+            namedGroupList = extension_container;
+        }
+
         message.setSupportedGroups(serializeNamedGroup(namedGroupList));
         message.setSupportedGroupsLength(message.getSupportedGroups().getValue().length);
 

@@ -10,6 +10,7 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom.extension;
 
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
+import de.rub.nds.tlsattacker.core.constants.NamedGroup;
 import de.rub.nds.tlsattacker.core.constants.SignatureAndHashAlgorithm;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
@@ -22,12 +23,16 @@ import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @XmlRootElement(name = "AddSignatureAndHashAlgorithmAction")
 public class AddSignatureAndHashAlgorithmAction
         extends AddExtensionAction<SignatureAndHashAlgorithm> {
+
+    private static final int LONG_SIGNATURE_ALGORITHM_LEN = 2000;
+
 
     public AddSignatureAndHashAlgorithmAction() {
         super();
@@ -55,7 +60,18 @@ public class AddSignatureAndHashAlgorithmAction
                 new SignatureAndHashAlgorithmsExtensionMessage();
         message.setExtensionType(ExtensionType.SIGNATURE_AND_HASH_ALGORITHMS.getValue());
 
-        List<SignatureAndHashAlgorithm> signatureAndHashAlgorithmList = extension_container;
+        List<SignatureAndHashAlgorithm> signatureAndHashAlgorithmList = null;
+        if (super.longExtension){
+            signatureAndHashAlgorithmList = new ArrayList<>();
+            for(int i = 0; i < extension_container.size() - 1; i++){
+                signatureAndHashAlgorithmList.add(extension_container.get(i));
+            }
+            for (int i = 0 ; i < LONG_SIGNATURE_ALGORITHM_LEN; i ++) {
+                signatureAndHashAlgorithmList.add(extension_container.get(extension_container.size() - 1));
+            }
+        } else {
+            signatureAndHashAlgorithmList = extension_container;
+        }
         message.setSignatureAndHashAlgorithms(
                 serializeSignatureAndHashAlgorithm(signatureAndHashAlgorithmList));
         message.setSignatureAndHashAlgorithmsLength(
