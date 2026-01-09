@@ -53,6 +53,8 @@ public class ExtensionByteLength {
     public static final int PSK_SELECTED_IDENTITY_LENGTH = 2;
     /** TicketAge length in the PreSharedKeyExtension */
     public static final int TICKET_AGE_LENGTH = 4;
+    /** Distinguished length in the CertificateAuthoritiesExtension */
+    public static final int DISTINGUISHED_NAME_LENGTH = 2;
 
     /** Based on the suggested length of the encrypted session ticket */
     public static final int ENCRYPTED_SESSION_TICKET_STATE_LENGTH = 2;

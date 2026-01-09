@@ -44,12 +44,12 @@ public class SupportedVersionsExtensionParser
      *
      * @param msg Message to write in
      */
+
     private void parseSupportedVersionLength(SupportedVersionsExtensionMessage msg) {
         msg.setSupportedVersionsLength(
                 parseIntField(ExtensionByteLength.SUPPORTED_PROTOCOL_VERSIONS_LENGTH));
         LOGGER.debug("SupportedVersionsLength: " + msg.getSupportedVersionsLength().getValue());
     }
-
     /**
      * Reads the next bytes as the supportedVersion of the Extension and writes them in the message
      *
