@@ -16,10 +16,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 
 public class ServerTcpTransportHandler extends TcpTransportHandler {
 
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final Marker TEST_MARKER = MarkerManager.getMarker("TEST");
 
     private ServerSocket serverSocket;
     private SocketManagement socketManagement = SocketManagement.DEFAULT;
@@ -51,20 +54,29 @@ public class ServerTcpTransportHandler extends TcpTransportHandler {
     }
 
     public void closeServerSocket() throws IOException {
-        if (serverSocket != null) {
-            serverSocket.close();
-        } else {
-            throw new IOException("TransportHandler not initialized");
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+                LOGGER.debug(TEST_MARKER, "ServerSocket closed.");
+            }
+        } catch (IOException e) {
+            LOGGER.debug(TEST_MARKER, "Could not close ServerSocket", e);
+        } finally {
+            serverSocket = null;
         }
     }
 
     @Override
     public void closeConnection() throws IOException {
-        if (socket != null) {
-            socket.close();
-        }
-        if (socketManagement == SocketManagement.DEFAULT) {
-            closeServerSocket();
+        try {
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+                LOGGER.debug(TEST_MARKER, "Client socket closed.");
+            }
+        } catch (IOException e) {
+            LOGGER.debug(TEST_MARKER, "Could not close client socket", e);
+        } finally {
+            socket = null;
         }
     }
 
@@ -87,7 +99,9 @@ public class ServerTcpTransportHandler extends TcpTransportHandler {
     public void preInitialize() throws IOException {
         if (socketManagement != SocketManagement.EXTERNAL_SOCKET) {
             if (serverSocket == null || serverSocket.isClosed()) {
-                serverSocket = new ServerSocket(srcPort);
+                serverSocket = new ServerSocket();
+                serverSocket.setReuseAddress(true);
+                serverSocket.bind(new java.net.InetSocketAddress(srcPort));
             }
             srcPort = serverSocket.getLocalPort();
         }

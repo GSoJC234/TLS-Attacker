@@ -18,9 +18,11 @@ import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
+import de.rub.nds.tlsattacker.transport.TransportHandler;
 import de.rub.nds.tlsattacker.transport.TransportHandlerFactory;
 import de.rub.nds.tlsattacker.transport.TransportHandlerType;
 import de.rub.nds.tlsattacker.transport.tcp.ClientTcpTransportHandler;
+import de.rub.nds.tlsattacker.transport.tcp.ServerTcpTransportHandler;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.io.IOException;
@@ -71,7 +73,6 @@ public class ConnectAction extends ConnectionBoundAction  {
         connection.setTransportHandlerType(TransportHandlerType.TCP);
         connection.setUseIpv6(false);
 
-
         Context context = new Context(state, connection);
         LayerStack layerStack =
                 LayerStackFactory.createLayerStack(state.getConfig().getDefaultLayerConfiguration(), context);
@@ -86,6 +87,18 @@ public class ConnectAction extends ConnectionBoundAction  {
         }
 
         setExecuted(true);
+    }
+
+    private TransportHandler findExistingTransportHandler(State state, int port) {
+        for (Context ctx : state.getAllContexts()) {
+            TransportHandler th = ctx.getTransportHandler();
+            if (th != null && th instanceof ServerTcpTransportHandler) {
+                if (ctx.getConnection() != null && ctx.getConnection().getPort() == port) {
+                    return th;
+                }
+            }
+        }
+        return null;
     }
 
     @Override

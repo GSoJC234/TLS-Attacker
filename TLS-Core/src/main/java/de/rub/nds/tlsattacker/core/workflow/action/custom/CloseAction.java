@@ -15,13 +15,19 @@ import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import de.rub.nds.tlsattacker.transport.TransportHandler;
 import de.rub.nds.tlsattacker.transport.socket.SocketState;
+import de.rub.nds.tlsattacker.transport.tcp.ClientTcpTransportHandler;
+import de.rub.nds.tlsattacker.transport.tcp.ServerTcpTransportHandler;
 import de.rub.nds.tlsattacker.transport.tcp.TcpTransportHandler;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.IOException;
 import java.util.Set;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 
 @XmlRootElement(name = "CloseAction")
 public class CloseAction extends ConnectionBoundAction {
+
+    private static final Marker TEST_MARKER = MarkerManager.getMarker("TEST");
 
     public CloseAction() {
         super();
@@ -43,28 +49,31 @@ public class CloseAction extends ConnectionBoundAction {
     @Override
     public void execute(State state) throws ActionExecutionException {
         Context context = state.getContext(getConnectionAlias());
-
         TransportHandler handler = context.getTransportHandler();
-        if (handler instanceof TcpTransportHandler) {
+
+        if (handler instanceof ServerTcpTransportHandler) {
             SocketState socketSt =
                     ((TcpTransportHandler) handler)
                             .getSocketState(state.getConfig().isReceiveFinalTcpSocketStateWithTimeout());
             context.getTcpContext().setFinalSocketState(socketSt);
+        } else if (handler instanceof ClientTcpTransportHandler) {
+            state.deleteContext(getConnectionAlias());
         } else {
             context.getTcpContext().setFinalSocketState(SocketState.UNAVAILABLE);
         }
 
         try {
             context.getTransportHandler().closeConnection();
+            LOGGER.debug(TEST_MARKER, "handler.closeConnection() called.");
         } catch (IOException ex) {
-            LOGGER.warn(
+            LOGGER.debug(TEST_MARKER,
                     "Could not close connection for context: {}",
                     context.getConnection().getAlias());
-            LOGGER.debug(ex);
+            LOGGER.debug(TEST_MARKER, ex.getLocalizedMessage());
         }
 
-        state.deleteContext(connectionAlias);
-        LOGGER.info("Connection closed!");
+        //state.deleteContext(connectionAlias);
+        LOGGER.debug(TEST_MARKER, "Connection closed!");
         setExecuted(true);
     }
 

@@ -18,17 +18,23 @@ import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
+import de.rub.nds.tlsattacker.transport.TransportHandler;
 import de.rub.nds.tlsattacker.transport.TransportHandlerFactory;
 import de.rub.nds.tlsattacker.transport.TransportHandlerType;
 import de.rub.nds.tlsattacker.transport.tcp.ClientTcpTransportHandler;
+import de.rub.nds.tlsattacker.transport.tcp.ServerTcpTransportHandler;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.MarkerManager;
 
 @XmlRootElement(name = "AcceptAction")
 public class AcceptAction extends ConnectionBoundAction {
+
+    private static final Marker TEST_MARKER = MarkerManager.getMarker("TEST");
 
     @XmlTransient private String ip;
     @XmlTransient private int port;
@@ -65,28 +71,52 @@ public class AcceptAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        InboundConnection connection = new InboundConnection(this.connectionAlias, port, ip);
-        connection.setIp(ip);
-        connection.setConnectionTimeout(connectionTimeOut);
-        connection.setTimeout(connectionTimeOut);
-        connection.setTransportHandlerType(TransportHandlerType.TCP);
-        connection.setUseIpv6(false);
+        TransportHandler transportHandler = findExistingTransportHandler(state, this.port);
+        if (transportHandler == null) {
+            InboundConnection connection = new InboundConnection(this.connectionAlias, port, ip);
+            connection.setIp(ip);
+            connection.setConnectionTimeout(connectionTimeOut);
+            connection.setTimeout(connectionTimeOut);
+            connection.setTransportHandlerType(TransportHandlerType.TCP);
+            connection.setUseIpv6(false);
 
-        Context context = new Context(state, connection);
-        LayerStack layerStack =
-                LayerStackFactory.createLayerStack(state.getConfig().getDefaultLayerConfiguration(), context);
-        context.setLayerStack(layerStack);
-        state.addContext(context);
+            Context context = new Context(state, connection);
+            LayerStack layerStack =
+                    LayerStackFactory.createLayerStack(state.getConfig().getDefaultLayerConfiguration(), context);
+            context.setLayerStack(layerStack);
 
-        context.setTransportHandler(TransportHandlerFactory.createTransportHandler(connection));
-        try {
-            context.getTransportHandler().preInitialize();
-            context.getTransportHandler().initialize();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            state.addContext(context);
+            context.setTransportHandler(TransportHandlerFactory.createTransportHandler(connection));
+            try {
+                context.getTransportHandler().preInitialize(); // Bind
+                context.getTransportHandler().initialize();    // Accept
+            } catch (IOException e) {
+                LOGGER.debug(TEST_MARKER, "Failed to initialize TransportHandler (Bind/Accept failed). Port: " + port, e);
+                throw new RuntimeException(e);
+            }
+        } else {
+            try {
+                transportHandler.initialize();  // Accept
+            } catch (IOException e) {
+                LOGGER.debug(TEST_MARKER, "Failed to initialize TransportHandler (Bind/Accept failed). Port: " + port, e);
+                throw new RuntimeException(e);
+            }
         }
-        LOGGER.info("Accepting connection!");
+
+        LOGGER.debug(TEST_MARKER, "Accepting connection!");
         setExecuted(true);
+    }
+
+    private TransportHandler findExistingTransportHandler(State state, int port) {
+        for (Context ctx : state.getAllContexts()) {
+            TransportHandler th = ctx.getTransportHandler();
+            if (th != null && th instanceof ServerTcpTransportHandler) {
+                if (ctx.getConnection() != null && ctx.getConnection().getPort() == port) {
+                    return th;
+                }
+            }
+        }
+        return null;
     }
 
     @Override

@@ -21,6 +21,7 @@ import de.rub.nds.tlsattacker.core.state.SessionTicket;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
+import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.security.NoSuchAlgorithmException;
@@ -82,7 +83,10 @@ public class GeneratePSKAction extends ConnectionBoundAction {
         }
         // only derive PSK if client finished was already sent, because full handshake transcript is
         // required
-        if (tlsContext.getActiveClientKeySetType() == Tls13KeySetType.APPLICATION_TRAFFIC_SECRETS) {
+        if (tlsContext.getTalkingConnectionEndType() == ConnectionEndType.CLIENT && tlsContext.getActiveClientKeySetType() == Tls13KeySetType.HANDSHAKE_TRAFFIC_SECRETS) {
+            pskSet.setPreSharedKey(derivePsk(tlsContext, pskSet));
+        }
+        if (tlsContext.getTalkingConnectionEndType() == ConnectionEndType.SERVER && tlsContext.getActiveClientKeySetType() == Tls13KeySetType.APPLICATION_TRAFFIC_SECRETS) {
             pskSet.setPreSharedKey(derivePsk(tlsContext, pskSet));
         }
 
