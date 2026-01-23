@@ -53,26 +53,27 @@ public class RecordDecryptor extends Decryptor {
         try {
             if (!tlsContext.getChooser().getSelectedProtocolVersion().isTLS13()
                     || record.getContentMessageType() != ProtocolMessageType.CHANGE_CIPHER_SPEC) {
+
                 try {
                     recordCipher.decrypt(record);
+                    recordCipher.getState().increaseReadSequenceNumber();
                 } catch (ParserException | CryptoException ex) {
-                    if (recordCipherList.indexOf(recordCipher) > 0) {
-                        LOGGER.warn(
-                                "Failed to decrypt record, will try to process with previous cipher");
-                        //if (recordCipherList.get(recordCipherList.indexOf(recordCipher) - 1)
-                        //        instanceof RecordNullCipher) {
-                        //    LOGGER.warn("previous cipher is NullCipher, decrypt is failed");
-                        //    throw new ParserException("previous cipher is NullCipher");
-                        //}
-                        recordCipherList
-                                .get(recordCipherList.indexOf(recordCipher) - 1)
-                                .decrypt(record);
-                    } else {
-                        LOGGER.warn("Decrypt is failed");
-                        throw new ParserException("Decrypt is failed", ex);
+                    LOGGER.warn(
+                            "Failed to decrypt record, will try to process with previous cipher");
+                    int rCIdx = recordCipherList.indexOf(recordCipher);
+                    for (int idx = rCIdx; idx >= 0; idx--) {
+                        try {
+                            recordCipherList.get(idx).decrypt(record);
+                            recordCipher.getState().increaseReadSequenceNumber();
+                            return;
+                        } catch (ParserException | CryptoException ex2) {
+                            LOGGER.warn(
+                                    "Failed to decrypt record, will try to process with previous cipher");
+                        }
                     }
+                    LOGGER.warn("Decrypt is failed");
+                    throw new ParserException("Decrypt is failed", ex);
                 }
-                recordCipher.getState().increaseReadSequenceNumber();
             } else {
                 LOGGER.debug("Skipping decryption for legacy CCS");
                 new RecordNullCipher(tlsContext, recordCipher.getState()).decrypt(record);
