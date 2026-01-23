@@ -83,7 +83,7 @@ public class GeneratePSKAction extends ConnectionBoundAction {
         }
         // only derive PSK if client finished was already sent, because full handshake transcript is
         // required
-        if (tlsContext.getTalkingConnectionEndType() == ConnectionEndType.CLIENT && tlsContext.getActiveClientKeySetType() == Tls13KeySetType.HANDSHAKE_TRAFFIC_SECRETS) {
+        if (tlsContext.getTalkingConnectionEndType() == ConnectionEndType.CLIENT && (tlsContext.getActiveClientKeySetType() == Tls13KeySetType.APPLICATION_TRAFFIC_SECRETS || tlsContext.getActiveClientKeySetType() == Tls13KeySetType.HANDSHAKE_TRAFFIC_SECRETS)) {
             pskSet.setPreSharedKey(derivePsk(tlsContext, pskSet));
         }
         if (tlsContext.getTalkingConnectionEndType() == ConnectionEndType.SERVER && tlsContext.getActiveClientKeySetType() == Tls13KeySetType.APPLICATION_TRAFFIC_SECRETS) {
