@@ -43,7 +43,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 @XmlRootElement(name = "AddSHPreSharedKeyAction")
-public class AddSHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
+public class AddSHPreSharedKeyAction extends AddExtensionAction<Integer> {
     public AddSHPreSharedKeyAction() {
         super();
     }
@@ -70,10 +70,12 @@ public class AddSHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         PreSharedKeyExtensionMessage message = new PreSharedKeyExtensionMessage();
         message.setExtensionType(ExtensionType.PRE_SHARED_KEY.getValue());
 
-        List<SessionTicket> sessionTickets = extension_container;
-        SessionTicket ticket = sessionTickets.get(0);
-        message.setSelectedIdentity(0);
-
+        List<Integer> sessionTickets = extension_container;
+        if (sessionTickets != null && !sessionTickets.isEmpty()) {
+            message.setSelectedIdentity(sessionTickets.get(0));
+        } else {
+            message.setSelectedIdentity(0);
+        }
         PreSharedKeyExtensionSerializer serializer =
                 new PreSharedKeyExtensionSerializer(message, endType);
         message.setExtensionContent(serializer.serializeExtensionContent());
