@@ -131,12 +131,13 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         message.setUnixTime(new byte[] {0x00, 0x00}); // dummy
         message.setRandom(random_container.get(0));
 
-        if (session_id_container != null) {
+        int defaultLen2 = 0;
+        if (session_id_container != null && session_id_container.get(0) != null) {
             message.setSessionId(session_id_container.get(0));
+            defaultLen2 = message.getSessionId().getValue().length;
         } else {
             message.setSessionId(new byte[]{});
         }
-        int defaultLen2 = message.getSessionId().getValue().length;
         int len2 = (sessionIdLen == null) ? defaultLen2
                 : SizeCalculator.calculate(sessionIdLen.get(0), defaultLen2, HandshakeByteLength.SESSION_ID_LENGTH);
         message.setSessionIdLength(len2);
