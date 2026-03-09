@@ -33,6 +33,7 @@ import de.rub.nds.tlsattacker.transport.TransportHandler;
 import de.rub.nds.tlsattacker.transport.TransportHandlerFactory;
 import de.rub.nds.tlsattacker.transport.socket.SocketState;
 import de.rub.nds.tlsattacker.transport.tcp.ClientTcpTransportHandler;
+import de.rub.nds.tlsattacker.transport.tcp.ServerTcpTransportHandler;
 import de.rub.nds.tlsattacker.transport.tcp.TcpTransportHandler;
 import java.io.IOException;
 import java.util.List;
@@ -204,7 +205,9 @@ public abstract class WorkflowExecutor {
     public void closeConnection() {
         for (Context context : state.getAllContexts()) {
             try {
-                context.getTransportHandler().closeConnection();
+                if (context.getTransportHandler() != null) {
+                    context.getTransportHandler().closeConnection();
+                }
             } catch (IOException ex) {
                 LOGGER.warn(
                         "Could not close connection for context: {}",
@@ -213,6 +216,22 @@ public abstract class WorkflowExecutor {
             }
         }
     }
+
+    public void closeServerSockets() {
+        for (Context context : state.getAllContexts()) {
+            try {
+                if (context.getTransportHandler() != null && context.getTransportHandler() instanceof ServerTcpTransportHandler) {
+                    ((ServerTcpTransportHandler) context.getTransportHandler()).closeServerSocket();
+                }
+            } catch (IOException ex) {
+                LOGGER.warn(
+                        "Could not close connection for context: {}",
+                        context.getConnection().getAlias());
+                LOGGER.debug(ex);
+            }
+        }
+    }
+
 
     public void initAllLayer() throws IOException {
         initTransportHandler(state);
