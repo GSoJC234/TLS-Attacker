@@ -98,6 +98,8 @@ public class ExtensionFactory {
                 return new PWDClearExtensionMessage();
             case CONNECTION_ID:
                 return new ConnectionIdExtensionMessage();
+            case CKS:
+                return new CksExtensionMessage();
             case QUIC_TRANSPORT_PARAMETERS:
                 return new QuicTransportParametersExtensionMessage();
             case GREASE_00:

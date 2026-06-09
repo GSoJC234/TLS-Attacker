@@ -81,14 +81,7 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         if (verify_data_container != null) {
             message.setVerifyData(verify_data_container.get(0));
         } else {
-            try {
-                Context context = state.getContext(getConnectionAlias());
-                context.setTalkingConnectionEndType(
-                        context.getConnection().getLocalConnectionEndType());
-                message.setVerifyData(computeVerifyData(state));
-            } catch (CryptoException e) {
-                throw new ActionExecutionException("Could not compute verify data.", e);
-            }
+            throw new ActionExecutionException("Could not set verify data.");
         }
 
         FinishedSerializer serializer = new FinishedSerializer(message);
@@ -111,75 +104,5 @@ public class BuildFinishedAction extends ConnectionBoundAction {
         return true;
     }
 
-    private byte[] computeVerifyData(State state) throws CryptoException {
-        Chooser chooser = state.getTlsContext(getConnectionAlias()).getChooser();
-        if (chooser.getSelectedProtocolVersion().isTLS13()) {
-            try {
-                HKDFAlgorithm hkdfAlgorithm =
-                        AlgorithmResolver.getHKDFAlgorithm(chooser.getSelectedCipherSuite());
-                String javaMacName = hkdfAlgorithm.getMacAlgorithm().getJavaName();
-                int macLength = Mac.getInstance(javaMacName).getMacLength();
-                LOGGER.debug("Connection End: " + chooser.getTalkingConnectionEnd());
-                byte[] trafficSecret;
-                if (chooser.getTalkingConnectionEnd() == ConnectionEndType.SERVER) {
-                    trafficSecret = chooser.getServerHandshakeTrafficSecret();
-                } else {
-                    trafficSecret = chooser.getClientHandshakeTrafficSecret();
-                }
-                byte[] finishedKey =
-                        HKDFunction.expandLabel(
-                                hkdfAlgorithm,
-                                trafficSecret,
-                                HKDFunction.FINISHED,
-                                new byte[0],
-                                macLength);
-                LOGGER.info("Finished key: {}", Arrays.toString(finishedKey));
-                SecretKeySpec keySpec = new SecretKeySpec(finishedKey, javaMacName);
-                byte[] result;
-                Mac mac = Mac.getInstance(javaMacName);
-                mac.init(keySpec);
-                mac.update(
-                        chooser.getContext()
-                                .getTlsContext()
-                                .getDigest()
-                                .digest(
-                                        chooser.getSelectedProtocolVersion(),
-                                        chooser.getSelectedCipherSuite()));
-                result = mac.doFinal();
-                return result;
-            } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
-                throw new CryptoException(ex);
-            }
-        } else {
-            LOGGER.debug("Calculating VerifyData:");
-            PRFAlgorithm prfAlgorithm = chooser.getPRFAlgorithm();
-            LOGGER.debug("Using PRF:" + prfAlgorithm.name());
-            byte[] masterSecret = chooser.getMasterSecret();
-            LOGGER.debug("Using MasterSecret: {}", masterSecret);
-            byte[] handshakeMessageHash =
-                    chooser.getContext()
-                            .getTlsContext()
-                            .getDigest()
-                            .digest(
-                                    chooser.getSelectedProtocolVersion(),
-                                    chooser.getSelectedCipherSuite());
-            LOGGER.debug("Using HandshakeMessage Hash: {}", handshakeMessageHash);
 
-            String label;
-            if (chooser.getTalkingConnectionEnd() == ConnectionEndType.SERVER) {
-                // TODO put this in separate config option
-                label = PseudoRandomFunction.SERVER_FINISHED_LABEL;
-            } else {
-                label = PseudoRandomFunction.CLIENT_FINISHED_LABEL;
-            }
-            byte[] res =
-                    PseudoRandomFunction.compute(
-                            prfAlgorithm,
-                            masterSecret,
-                            label,
-                            handshakeMessageHash,
-                            HandshakeByteLength.VERIFY_DATA);
-            return res;
-        }
-    }
 }

@@ -74,6 +74,7 @@ import java.io.InputStream;
     SRPExtensionMessage.class,
     CachedInfoExtensionMessage.class,
     ConnectionIdExtensionMessage.class,
+    CksExtensionMessage.class,
     QuicTransportParametersExtensionMessage.class,
     EncryptedClientHelloExtensionMessage.class
 })

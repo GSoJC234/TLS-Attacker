@@ -59,6 +59,7 @@ public enum ExtensionType {
     SIGNATURE_ALGORITHMS_CERT(new byte[] {(byte) 0, (byte) 50}),
     KEY_SHARE(new byte[] {(byte) 0, (byte) 51}),
     RENEGOTIATION_INFO(new byte[] {(byte) 0xFF, (byte) 0x01}),
+    CKS(new byte[] {(byte) 0xFF, (byte) 0x92}),
     ENCRYPTED_SERVER_NAME_INDICATION(new byte[] {(byte) 0xFF, (byte) 0xCE}),
     QUIC_TRANSPORT_PARAMETERS(new byte[] {(byte) 0x00, (byte) 0x39}),
     CONNECTION_ID(new byte[] {(byte) 0, (byte) 54}),
@@ -176,6 +177,7 @@ public enum ExtensionType {
         list.add(COOKIE);
         list.add(RECORD_SIZE_LIMIT);
         list.add(CONNECTION_ID);
+        list.add(CKS);
         list.add(QUIC_TRANSPORT_PARAMETERS);
         list.add(ENCRYPTED_CLIENT_HELLO);
 
@@ -221,6 +223,7 @@ public enum ExtensionType {
         list.add(COOKIE);
         list.add(RECORD_SIZE_LIMIT);
         list.add(CONNECTION_ID);
+        list.add(CKS);
         list.add(QUIC_TRANSPORT_PARAMETERS);
         list.add(ENCRYPTED_CLIENT_HELLO);
 
@@ -249,6 +252,7 @@ public enum ExtensionType {
         list.add(COOKIE);
         list.add(RECORD_SIZE_LIMIT);
         list.add(CONNECTION_ID);
+        list.add(CKS);
         list.add(ENCRYPTED_CLIENT_HELLO);
 
         return list;
@@ -288,6 +292,7 @@ public enum ExtensionType {
         List<ExtensionType> list = new LinkedList<>();
         list.add(EARLY_DATA);
         list.add(KEY_SHARE);
+        list.add(CKS);
         return list;
     }
 }
