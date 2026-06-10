@@ -33,6 +33,8 @@ public class BuildRecordAction extends ConnectionBoundAction {
     @XmlTransient private List<ProtocolMessageType> record_type_container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
     @XmlTransient private List<ProtocolMessage> message_container = null;
+    @XmlTransient private List<Integer> message_length = null;
+
 
     public BuildRecordAction() {super();}
 
@@ -60,6 +62,10 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
     public void setProtocolMessage(List<ProtocolMessage> message_container) {
         this.message_container = message_container;
+    }
+
+    public void setProtocolMessageLength(List<Integer> message_length) {
+        this.message_length = message_length;
     }
 
     @Override
@@ -113,7 +119,11 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
             record.setProtocolMessageBytes(message.getCompleteResultingMessage());
             record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
-            record.setLength(record.getProtocolMessageBytes().getValue().length);
+            if(message_length != null && !message_length.isEmpty()) {
+                record.setLength(message_length.get(0));
+            } else {
+                record.setLength(record.getProtocolMessageBytes().getValue().length);
+            }
 
             RecordSerializer serializer = new RecordSerializer(record);
             record.setCompleteRecordBytes(serializer.serialize());
