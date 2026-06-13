@@ -10,6 +10,7 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom;
 
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import de.rub.nds.tlsattacker.core.constants.RecordByteLength;
 import de.rub.nds.tlsattacker.core.exceptions.ActionExecutionException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
@@ -119,10 +120,15 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
             record.setProtocolMessageBytes(message.getCompleteResultingMessage());
             record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
+            int defaultLen = record.getProtocolMessageBytes().getValue().length;
             if(message_length != null && !message_length.isEmpty()) {
-                record.setLength(message_length.get(0));
+                record.setLength(
+                        SizeCalculator.calculate(
+                                message_length.get(0),
+                                defaultLen,
+                                RecordByteLength.RECORD_LENGTH));
             } else {
-                record.setLength(record.getProtocolMessageBytes().getValue().length);
+                record.setLength(defaultLen);
             }
 
             RecordSerializer serializer = new RecordSerializer(record);

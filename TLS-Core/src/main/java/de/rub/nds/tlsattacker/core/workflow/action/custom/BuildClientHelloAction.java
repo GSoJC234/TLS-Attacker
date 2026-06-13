@@ -120,7 +120,12 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
             message.setType(HandshakeMessageType.CLIENT_HELLO.getValue());
         }
 
-        message.setProtocolVersion(version_container.get(0).getValue());
+        ProtocolVersion selectedVersion =
+                version_container != null && !version_container.isEmpty()
+                        ? version_container.get(0)
+                        : state.getTlsContext(getConnectionAlias()).getChooser().getSelectedProtocolVersion();
+
+        message.setProtocolVersion(selectedVersion.getValue());
 
         message.setCipherSuites(serializeCipherSuites(suite_container));
         int defaultLen1 = message.getCipherSuites().getValue().length;
@@ -149,7 +154,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         message.setCompressionLength(len3);
 
         ClientHelloSerializer serializer =
-                new ClientHelloSerializer(message, ProtocolVersion.TLS13);
+                new ClientHelloSerializer(message, selectedVersion);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         message.setCompleteResultingMessage(serializer.serialize());
