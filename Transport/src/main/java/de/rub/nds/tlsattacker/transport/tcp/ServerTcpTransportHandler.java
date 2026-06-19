@@ -102,9 +102,17 @@ public class ServerTcpTransportHandler extends TcpTransportHandler {
                 serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
                 serverSocket.bind(new java.net.InetSocketAddress(srcPort));
+                emitServerReadyMarker();
             }
             srcPort = serverSocket.getLocalPort();
         }
+    }
+
+    private void emitServerReadyMarker() {
+        String host = serverSocket.getInetAddress().getHostAddress();
+        int port = serverSocket.getLocalPort();
+        System.out.println("MTA_MARKER server-ready host=" + host + " port=" + port);
+        System.out.flush();
     }
 
     @Override

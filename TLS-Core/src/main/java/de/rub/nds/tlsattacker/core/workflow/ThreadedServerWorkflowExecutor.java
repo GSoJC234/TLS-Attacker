@@ -161,11 +161,19 @@ public class ThreadedServerWorkflowExecutor extends WorkflowExecutor {
         try {
             serverSocket = new ServerSocket(bindPort, BACKLOG);
             serverSocket.setReuseAddress(true);
+            emitServerReadyMarker();
         } catch (IOException ex) {
             throw new RuntimeException("Could not instantiate server socket", ex);
         }
         killed = false;
         shutdown = false;
+    }
+
+    private void emitServerReadyMarker() {
+        String host = serverSocket.getInetAddress().getHostAddress();
+        int port = serverSocket.getLocalPort();
+        System.out.println("MTA_MARKER server-ready host=" + host + " port=" + port);
+        System.out.flush();
     }
 
     public void kill() {
