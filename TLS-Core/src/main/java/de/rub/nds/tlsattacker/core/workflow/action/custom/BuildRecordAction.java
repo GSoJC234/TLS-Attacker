@@ -84,11 +84,10 @@ public class BuildRecordAction extends ConnectionBoundAction {
         }
 
         ProtocolMessage message = message_container.get(0);
-        ProtocolMessageType msgType = record_type_container.get(0);
+        ProtocolMessageType requestedMsgType = record_type_container.get(0);
 
         Record record = new Record();
         boolean isTls13 = ctx.getChooser().getSelectedProtocolVersion().isTLS13();
-        boolean isHandshake = (msgType == ProtocolMessageType.HANDSHAKE);
 
         // TLS 1.3에서도 ClientHello/ServerHello/HelloRetryRequest는 평문 Handshake로 전송
         boolean isHelloLike =
@@ -96,11 +95,21 @@ public class BuildRecordAction extends ConnectionBoundAction {
                         (message instanceof ServerHelloMessage) ||
                         (message instanceof HelloRequestMessage);
 
+        ProtocolMessageType msgType = requestedMsgType;
+        if (isTls13
+                && requestedMsgType == ProtocolMessageType.APPLICATION_DATA
+                && message instanceof HandshakeMessage
+                && !isHelloLike) {
+            msgType = ProtocolMessageType.HANDSHAKE;
+        }
+        boolean isHandshake = (msgType == ProtocolMessageType.HANDSHAKE);
+
         // 보호가 필요한 구간? → TLS1.3 && Handshake && !Hello류 (EE/Cert/Finished/NST 등)
         boolean needsProtection = isTls13 && isHandshake && !isHelloLike;
 
         if (needsProtection) {
-            // === TLS 1.3 보호 구간: outer=ApplicationData, legacy ver=0x0303, clean만 세팅 ===
+            // === TLS 1.3 보호 구간: inner type source와 clean bytes만 세팅 ===
+            // RecordAEADCipher가 암호화 후 outer content type을 application_data로 설정한다.
             record.setShouldPrepare(false); // 암호화/직렬화는 EncryptAction에서
             record.setContentType(msgType.getValue());
             record.setContentMessageType(msgType);
