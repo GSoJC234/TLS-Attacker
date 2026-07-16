@@ -10,10 +10,14 @@ package de.rub.nds.tlsattacker.core.protocol.handler;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.*;
+import de.rub.nds.tlsattacker.core.crypto.HKDFunction;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.KeyShareExtensionMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareStoreEntry;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import java.math.BigInteger;
@@ -21,6 +25,10 @@ import org.junit.jupiter.api.Test;
 
 public class ServerHelloHandlerTest
         extends AbstractProtocolMessageHandlerTest<ServerHelloMessage, ServerHelloHandler> {
+
+    private static final byte[] X25519_SERVER_SHARE =
+            ArrayConverter.hexStringToByteArray(
+                    "9c1b0a7421919a73cb57b3a0ad9d6805861a9c47e11df8639d25323b79ce201c");
 
     public ServerHelloHandlerTest() {
         super(ServerHelloMessage::new, ServerHelloHandler::new);
@@ -65,12 +73,7 @@ public class ServerHelloHandlerTest
         message.setSelectedCipherSuite(CipherSuite.TLS_AES_128_GCM_SHA256.getByteValue());
         message.setSessionId(new byte[] {6, 6, 6});
         message.setProtocolVersion(ProtocolVersion.TLS13.getValue());
-        context.setServerKeyShareStoreEntry(
-                new KeyShareStoreEntry(
-                        NamedGroup.ECDH_X25519,
-                        ArrayConverter.hexStringToByteArray(
-                                "9c1b0a7421919a73cb57b3a0ad9d6805861a9c47e11df8639d25323b79ce201c")));
-        context.addNegotiatedExtension(ExtensionType.KEY_SHARE);
+        addKeyShareExtension(message, NamedGroup.ECDH_X25519, X25519_SERVER_SHARE);
         handler.adjustContext(message);
         assertArrayEquals(
                 ArrayConverter.hexStringToByteArray(
@@ -97,16 +100,119 @@ public class ServerHelloHandlerTest
                 CipherSuite.TLS_ECCPWD_WITH_AES_128_GCM_SHA256.getByteValue());
         message.setSessionId(new byte[] {6, 6, 6});
         message.setProtocolVersion(ProtocolVersion.TLS13.getValue());
-        context.setServerKeyShareStoreEntry(
-                new KeyShareStoreEntry(
-                        NamedGroup.BRAINPOOLP256R1,
-                        ArrayConverter.hexStringToByteArray(
-                                "9EE17F2ECF74028F6C1FD70DA1D05A4A85975D7D270CAA6B8605F1C6EBB875BA87579167408F7C9E77842C2B3F3368A25FD165637E9B5D57760B0B704659B87420669244AA67CB00EA72C09B84A9DB5BB824FC3982428FCD406963AE080E677A48")));
-        context.addNegotiatedExtension(ExtensionType.KEY_SHARE);
+        addKeyShareExtension(
+                message,
+                NamedGroup.BRAINPOOLP256R1,
+                ArrayConverter.hexStringToByteArray(
+                        "9EE17F2ECF74028F6C1FD70DA1D05A4A85975D7D270CAA6B8605F1C6EBB875BA87579167408F7C9E77842C2B3F3368A25FD165637E9B5D57760B0B704659B87420669244AA67CB00EA72C09B84A9DB5BB824FC3982428FCD406963AE080E677A48"));
         handler.adjustContext(message);
         assertArrayEquals(
                 ArrayConverter.hexStringToByteArray(
                         "09E4B18F6B4F59BD8ADED8E875CD9B9A7694A8C5345EDB3381A47D1F860BF209"),
                 context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13MissingKeyShareAndPskDoesNotUseStaleContext()
+            throws Exception {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.getConfig()
+                .setDefaultKeySharePrivateKey(
+                        NamedGroup.ECDH_X25519,
+                        new BigInteger(
+                                ArrayConverter.hexStringToByteArray(
+                                        "03BD8BCA70C19F657E897E366DBE21A466E4924AF6082DBDF573827BCDDE5DEF")));
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.setPsk(new byte[] {1, 2, 3, 4});
+        context.getConfig().setUsePsk(true);
+        context.setServerKeyShareStoreEntry(
+                new KeyShareStoreEntry(NamedGroup.ECDH_X25519, X25519_SERVER_SHARE));
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[32], new byte[0]), context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13MissingKeyShareAndPskWolfSslDockerMetadata()
+            throws Exception {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.6.0");
+        context.getConfig().setTargetExecutionMode("docker");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        context.getConfig().setTargetBuildProfile("local-repro-no-psk");
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[32], new byte[512]), context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13MissingKeyShareAndPskNonWolfSslMetadata()
+            throws Exception {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("OpenSSL");
+        context.getConfig().setTargetLibraryVersion("3.4.0");
+        context.getConfig().setTargetExecutionMode("docker");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[32], new byte[0]), context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13MissingKeyShareAndPskWolfSslMetadataUnresolved() {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.6.0");
+
+        assertThrows(IllegalStateException.class, () -> handler.adjustContext(message));
+    }
+
+    private ServerHelloMessage createTls13ServerHello() {
+        ServerHelloMessage message = new ServerHelloMessage();
+        message.setUnixTime(new byte[] {0, 1, 2});
+        message.setRandom(new byte[] {0, 1, 2, 3, 4, 5});
+        message.setSelectedCompressionMethod(CompressionMethod.DEFLATE.getValue());
+        message.setSelectedCipherSuite(CipherSuite.TLS_AES_128_GCM_SHA256.getByteValue());
+        message.setSessionId(new byte[] {6, 6, 6});
+        message.setProtocolVersion(ProtocolVersion.TLS13.getValue());
+        return message;
+    }
+
+    private void addKeyShareExtension(
+            ServerHelloMessage message, NamedGroup namedGroup, byte[] publicKey) {
+        KeyShareEntry entry = new KeyShareEntry();
+        entry.setGroup(namedGroup.getValue());
+        entry.setPublicKey(publicKey);
+        entry.setPublicKeyLength(publicKey.length);
+        KeyShareExtensionMessage extension = new KeyShareExtensionMessage();
+        extension.getKeyShareList().add(entry);
+        message.addExtension(extension);
+    }
+
+    private byte[] deriveHandshakeSecret(byte[] psk, byte[] sharedSecret) throws Exception {
+        HKDFAlgorithm hkdfAlgorithm =
+                AlgorithmResolver.getHKDFAlgorithm(CipherSuite.TLS_AES_128_GCM_SHA256);
+        DigestAlgorithm digestAlgorithm =
+                AlgorithmResolver.getDigestAlgorithm(
+                        ProtocolVersion.TLS13, CipherSuite.TLS_AES_128_GCM_SHA256);
+        byte[] earlySecret = HKDFunction.extract(hkdfAlgorithm, new byte[0], psk);
+        byte[] saltHandshakeSecret =
+                HKDFunction.deriveSecret(
+                        hkdfAlgorithm,
+                        digestAlgorithm.getJavaName(),
+                        earlySecret,
+                        HKDFunction.DERIVED,
+                        new byte[0]);
+        return HKDFunction.extract(hkdfAlgorithm, saltHandshakeSecret, sharedSecret);
     }
 }

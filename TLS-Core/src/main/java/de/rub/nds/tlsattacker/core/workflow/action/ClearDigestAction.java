@@ -27,8 +27,8 @@ public class ClearDigestAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        LOGGER.debug("Resetting digest...");
-        state.getTlsContext().getDigest().reset();
+        LOGGER.debug("Resetting digest for connection alias {}...", getConnectionAlias());
+        state.getTlsContext(getConnectionAlias()).getDigest().reset();
         setExecuted(true);
     }
 

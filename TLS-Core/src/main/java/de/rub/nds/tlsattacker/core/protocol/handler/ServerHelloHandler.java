@@ -26,6 +26,8 @@ import de.rub.nds.tlsattacker.core.protocol.message.ClientHelloMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.computations.PWDComputations;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.EncryptedClientHelloExtensionMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.KeyShareExtensionMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.PreSharedKeyExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.DragonFlyKeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareStoreEntry;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.keyshare.DragonFlyKeyShareEntryParser;
@@ -80,18 +82,20 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
         if (!message.isTls13HelloRetryRequest()) {
             if (tlsContext.getChooser().getSelectedProtocolVersion().isTLS13()) {
 
-                boolean usePskKe =
-                        tlsContext.getPsk() != null
-                                && tlsContext.getClientPskKeyExchangeModes() != null
-                                && tlsContext.getClientPskKeyExchangeModes().contains(PskKeyExchangeMode.PSK_KE)
-                                && tlsContext.getClientKeyShareStoreEntryList() != null;
+                boolean serverHelloHasKeyShare =
+                        message.getExtension(KeyShareExtensionMessage.class) != null;
+                boolean serverHelloHasSelectedPsk = hasSelectedPsk(message);
 
                 KeyShareStoreEntry keyShareStoreEntry = null;
-                if (!usePskKe) {
+                if (serverHelloHasKeyShare) {
                     keyShareStoreEntry = adjustKeyShareStoreEntry();
+                } else {
+                    LOGGER.info(
+                            "ServerHello does not contain key_share; not using a stale key share for TLS 1.3 key schedule");
                 }
 
-                adjustHandshakeTrafficSecrets(keyShareStoreEntry);
+                adjustHandshakeTrafficSecrets(
+                        keyShareStoreEntry, serverHelloHasKeyShare, serverHelloHasSelectedPsk);
                 if (tlsContext.getTalkingConnectionEndType()
                         != tlsContext.getChooser().getConnectionEndType()) {
                     setServerRecordCipher();
@@ -120,6 +124,14 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
         } else {
             adjustHelloRetryDigest(message);
         }
+    }
+
+    private boolean hasSelectedPsk(ServerHelloMessage message) {
+        PreSharedKeyExtensionMessage extension =
+                message.getExtension(PreSharedKeyExtensionMessage.class);
+        return extension != null
+                && extension.getSelectedIdentity() != null
+                && extension.getSelectedIdentity().getValue() != null;
     }
 
     private void adjustSelectedCipherSuite(ServerHelloMessage message) {
@@ -255,7 +267,10 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
         }
     }
 
-    private void adjustHandshakeTrafficSecrets(KeyShareStoreEntry keyShareStoreEntry) {
+    private void adjustHandshakeTrafficSecrets(
+            KeyShareStoreEntry keyShareStoreEntry,
+            boolean serverHelloHasKeyShare,
+            boolean serverHelloHasSelectedPsk) {
         HKDFAlgorithm hkdfAlgorithm =
                 AlgorithmResolver.getHKDFAlgorithm(
                         tlsContext.getChooser().getSelectedCipherSuite());
@@ -273,8 +288,11 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                         Mac.getInstance(hkdfAlgorithm.getMacAlgorithm().getJavaName())
                                 .getMacLength();
             }
+            boolean useSelectedPsk =
+                    serverHelloHasSelectedPsk
+                            && (tlsContext.getConfig().isUsePsk() || tlsContext.getPsk() != null);
             byte[] psk =
-                    (tlsContext.getConfig().isUsePsk() || tlsContext.getPsk() != null)
+                    useSelectedPsk
                             ? tlsContext.getChooser().getPsk()
                             : new byte[macLength]; // use PSK if available
             byte[] earlySecret = HKDFunction.extract(hkdfAlgorithm, new byte[0], psk);
@@ -288,10 +306,26 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                             new byte[0]);
             LOGGER.info("saltHandshakeSecret: " + Arrays.toString(saltHandshakeSecret));
             byte[] sharedSecret;
-            if (keyShareStoreEntry == null){
-                // PSK-Only (PSK_KE)
+            if (!serverHelloHasKeyShare) {
+                byte[] resolvedSharedSecret =
+                        !serverHelloHasSelectedPsk
+                                ? Tls13MalformedServerHelloSharedSecretResolver
+                                        .resolveMissingKeyShareAndPskSharedSecret(
+                                                tlsContext.getConfig())
+                                : null;
+                if (resolvedSharedSecret != null) {
+                    LOGGER.info(
+                            "Using target implementation model shared secret of length {} because ServerHello has neither key_share nor selected PSK",
+                            resolvedSharedSecret.length);
+                    sharedSecret = resolvedSharedSecret;
+                } else {
+                    // PSK-Only (PSK_KE) or malformed ServerHello without a target implementation model.
+                    sharedSecret = new byte[0];
+                }
+            } else if (keyShareStoreEntry == null) {
+                LOGGER.warn("ServerHello contained key_share but no matching key share was found");
                 sharedSecret = new byte[0];
-            } else if (tlsContext.getChooser().getSelectedCipherSuite().isPWD()){
+            } else if (tlsContext.getChooser().getSelectedCipherSuite().isPWD()) {
                 sharedSecret = computeSharedPWDSecret(keyShareStoreEntry);
             } else {
                 BigInteger privateKey =

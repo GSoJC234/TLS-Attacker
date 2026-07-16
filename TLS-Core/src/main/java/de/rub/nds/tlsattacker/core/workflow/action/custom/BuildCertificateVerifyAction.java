@@ -29,6 +29,12 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.MGF1ParameterSpec;
+import java.security.spec.PSSParameterSpec;
+import java.security.spec.RSAPrivateKeySpec;
 import java.util.List;
 import java.util.Set;
 
@@ -87,6 +93,10 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         Context context = state.getContext(getConnectionAlias());
 
         BigInteger privateKey = new BigInteger(1, this.certificatePrivateKey_container.get(0));
+        BigInteger rsaModulus =
+                this.certificatePrivateKey_container.size() > 1
+                        ? new BigInteger(1, this.certificatePrivateKey_container.get(1))
+                        : null;
         SignatureAndHashAlgorithm algorithm;
         if(signature_and_hash_algorithm_container != null){
             algorithm = signature_and_hash_algorithm_container.get(0);
@@ -98,7 +108,7 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
 
         ConnectionEndType endType = context.getConnection().getLocalConnectionEndType();
         X509Context x509 = context.getTlsContext().getTalkingX509Context();
-        setX509SubjectPrivateKey(x509, algorithm.getSignatureAlgorithm(), privateKey);
+        setX509SubjectPrivateKey(x509, algorithm.getSignatureAlgorithm(), privateKey, rsaModulus);
 
         CertificateVerifyMessage message = new CertificateVerifyMessage();
         message.setShouldPrepareDefault(false);
@@ -132,7 +142,11 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         setExecuted(true);
     }
 
-    private void setX509SubjectPrivateKey(X509Context x509, SignatureAlgorithm algorithm, BigInteger privateKey) {
+    private void setX509SubjectPrivateKey(
+            X509Context x509,
+            SignatureAlgorithm algorithm,
+            BigInteger privateKey,
+            BigInteger rsaModulus) {
         switch (algorithm) {
             case DSA:
                 x509.setSubjectDsaPrivateKey(privateKey);
@@ -143,6 +157,9 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
             case RSA_PKCS1:
             case RSA_SSA_PSS:
                 x509.setSubjectRsaPrivateKey(privateKey);
+                if (rsaModulus != null) {
+                    x509.setSubjectRsaModulus(rsaModulus);
+                }
                 return;
             default:
                 return;
@@ -195,14 +212,54 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
                                                 chooser.getSelectedCipherSuite()));
             }
         }
-        TlsSignatureUtil signatureUtil = new TlsSignatureUtil();
-        signatureUtil.computeSignature(
-                chooser,
-                algorithm,
-                toBeSigned,
-                message.getSignatureComputations(algorithm.getSignatureAlgorithm()));
-        return message.getSignatureComputations(algorithm.getSignatureAlgorithm())
-                .getSignatureBytes()
-                .getValue();
+        if (algorithm.getSignatureAlgorithm() == SignatureAlgorithm.RSA_SSA_PSS) {
+            return createRsaPssSignature(chooser, algorithm, toBeSigned);
+        } else {
+            TlsSignatureUtil signatureUtil = new TlsSignatureUtil();
+            signatureUtil.computeSignature(
+                    chooser,
+                    algorithm,
+                    toBeSigned,
+                    message.getSignatureComputations(algorithm.getSignatureAlgorithm()));
+            return message.getSignatureComputations(algorithm.getSignatureAlgorithm())
+                    .getSignatureBytes()
+                    .getValue();
+        }
+    }
+
+    private byte[] createRsaPssSignature(
+            Chooser chooser, SignatureAndHashAlgorithm algorithm, byte[] toBeSigned)
+            throws CryptoException {
+        try {
+            BigInteger modulus =
+                    chooser.getContext()
+                            .getTlsContext()
+                            .getTalkingX509Context()
+                            .getChooser()
+                            .getSubjectRsaModulus();
+            BigInteger privateKey =
+                    chooser.getContext()
+                            .getTlsContext()
+                            .getTalkingX509Context()
+                            .getChooser()
+                            .getSubjectRsaPrivateKey();
+            String hashName = algorithm.getHashAlgorithm().getJavaName();
+            Signature signature = Signature.getInstance("RSASSA-PSS");
+            signature.setParameter(
+                    new PSSParameterSpec(
+                            hashName,
+                            "MGF1",
+                            new MGF1ParameterSpec(hashName),
+                            algorithm.getHashAlgorithm().getBitLength() / 8,
+                            PSSParameterSpec.TRAILER_FIELD_BC));
+            PrivateKey key =
+                    KeyFactory.getInstance("RSA")
+                            .generatePrivate(new RSAPrivateKeySpec(modulus, privateKey));
+            signature.initSign(key);
+            signature.update(toBeSigned);
+            return signature.sign();
+        } catch (Exception e) {
+            throw new CryptoException("Could not create RSA-PSS signature", e);
+        }
     }
 }

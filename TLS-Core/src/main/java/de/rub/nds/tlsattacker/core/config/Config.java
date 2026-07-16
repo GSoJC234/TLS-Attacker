@@ -877,6 +877,24 @@ public class Config implements Serializable {
     @XmlJavaTypeAdapter(UnformattedByteArrayAdapter.class)
     private byte[] defaultPreMasterSecret = new byte[0];
 
+    private String targetLibraryName = "";
+
+    private String targetLibraryVersion = "";
+
+    private String targetLibraryPath = "";
+
+    private String targetTlsRole = "";
+
+    private String targetExecutionMode = "";
+
+    private String targetRuntimePlatform = "";
+
+    private String targetDockerImage = "";
+
+    private String targetBuildProfile = "";
+
+    private String targetBinaryPath = "";
+
     @XmlJavaTypeAdapter(UnformattedByteArrayAdapter.class)
     private byte[] defaultClientExtendedRandom =
             ArrayConverter.hexStringToByteArray(
@@ -2118,6 +2136,78 @@ public class Config implements Serializable {
 
     public void setDefaultPreMasterSecret(byte[] defaultPreMasterSecret) {
         this.defaultPreMasterSecret = defaultPreMasterSecret;
+    }
+
+    public String getTargetLibraryName() {
+        return targetLibraryName;
+    }
+
+    public void setTargetLibraryName(String targetLibraryName) {
+        this.targetLibraryName = targetLibraryName;
+    }
+
+    public String getTargetLibraryVersion() {
+        return targetLibraryVersion;
+    }
+
+    public void setTargetLibraryVersion(String targetLibraryVersion) {
+        this.targetLibraryVersion = targetLibraryVersion;
+    }
+
+    public String getTargetLibraryPath() {
+        return targetLibraryPath;
+    }
+
+    public void setTargetLibraryPath(String targetLibraryPath) {
+        this.targetLibraryPath = targetLibraryPath;
+    }
+
+    public String getTargetTlsRole() {
+        return targetTlsRole;
+    }
+
+    public void setTargetTlsRole(String targetTlsRole) {
+        this.targetTlsRole = targetTlsRole;
+    }
+
+    public String getTargetExecutionMode() {
+        return targetExecutionMode;
+    }
+
+    public void setTargetExecutionMode(String targetExecutionMode) {
+        this.targetExecutionMode = targetExecutionMode;
+    }
+
+    public String getTargetRuntimePlatform() {
+        return targetRuntimePlatform;
+    }
+
+    public void setTargetRuntimePlatform(String targetRuntimePlatform) {
+        this.targetRuntimePlatform = targetRuntimePlatform;
+    }
+
+    public String getTargetDockerImage() {
+        return targetDockerImage;
+    }
+
+    public void setTargetDockerImage(String targetDockerImage) {
+        this.targetDockerImage = targetDockerImage;
+    }
+
+    public String getTargetBuildProfile() {
+        return targetBuildProfile;
+    }
+
+    public void setTargetBuildProfile(String targetBuildProfile) {
+        this.targetBuildProfile = targetBuildProfile;
+    }
+
+    public String getTargetBinaryPath() {
+        return targetBinaryPath;
+    }
+
+    public void setTargetBinaryPath(String targetBinaryPath) {
+        this.targetBinaryPath = targetBinaryPath;
     }
 
     public byte[] getDefaultMasterSecret() {
