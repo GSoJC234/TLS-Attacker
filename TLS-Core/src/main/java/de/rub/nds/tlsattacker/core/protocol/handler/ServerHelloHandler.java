@@ -122,6 +122,7 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
                 tlsContext.setMasterSecret(session.getMasterSecret());
             }
         } else {
+            tlsContext.setHelloRetryRequestProcessed(true);
             adjustHelloRetryDigest(message);
         }
     }
@@ -308,15 +309,14 @@ public class ServerHelloHandler extends HandshakeMessageHandler<ServerHelloMessa
             byte[] sharedSecret;
             if (!serverHelloHasKeyShare) {
                 byte[] resolvedSharedSecret =
-                        !serverHelloHasSelectedPsk
-                                ? Tls13MalformedServerHelloSharedSecretResolver
-                                        .resolveMissingKeyShareAndPskSharedSecret(
-                                                tlsContext.getConfig())
-                                : null;
+                        Tls13MalformedServerHelloSharedSecretResolver
+                                .resolveMissingKeyShareSharedSecret(
+                                        tlsContext, serverHelloHasSelectedPsk);
                 if (resolvedSharedSecret != null) {
                     LOGGER.info(
-                            "Using target implementation model shared secret of length {} because ServerHello has neither key_share nor selected PSK",
-                            resolvedSharedSecret.length);
+                            "Using target implementation model shared secret of length {} because ServerHello has no key_share (selected PSK: {})",
+                            resolvedSharedSecret.length,
+                            serverHelloHasSelectedPsk);
                     sharedSecret = resolvedSharedSecret;
                 } else {
                     // PSK-Only (PSK_KE) or malformed ServerHello without a target implementation model.

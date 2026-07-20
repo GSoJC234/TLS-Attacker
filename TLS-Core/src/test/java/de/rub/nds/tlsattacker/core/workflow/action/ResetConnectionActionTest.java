@@ -12,10 +12,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.rub.nds.tlsattacker.core.constants.CipherSuite;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.NamedGroup;
+import de.rub.nds.tlsattacker.core.constants.PskKeyExchangeMode;
 import de.rub.nds.tlsattacker.core.constants.Tls13KeySetType;
 import de.rub.nds.tlsattacker.core.exceptions.CryptoException;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.layer.impl.RecordLayer;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareStoreEntry;
 import de.rub.nds.tlsattacker.core.record.cipher.CipherState;
 import de.rub.nds.tlsattacker.core.record.cipher.RecordBlockCipher;
 import de.rub.nds.tlsattacker.core.record.cipher.RecordCipher;
@@ -26,6 +29,7 @@ import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.JAXBException;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -54,6 +58,14 @@ public class ResetConnectionActionTest extends AbstractActionTest<ResetConnectio
 
     @Test
     public void testExecute() throws Exception {
+        context.setHelloRetryRequestProcessed(true);
+        context.setClientPskKeyExchangeModes(List.of(PskKeyExchangeMode.PSK_DHE_KE));
+        context.setClientKeyShareStoreEntryList(
+                List.of(new KeyShareStoreEntry(NamedGroup.SECP256R1, new byte[] {1})));
+        context.setSelectedGroup(NamedGroup.SECP256R1);
+        context.setServerKeyShareStoreEntry(
+                new KeyShareStoreEntry(NamedGroup.SECP256R1, new byte[] {1}));
+
         super.testExecute();
         RecordLayer layer = (RecordLayer) context.getRecordLayer();
         assertTrue(layer.getEncryptorCipher() instanceof RecordNullCipher);
@@ -62,6 +74,11 @@ public class ResetConnectionActionTest extends AbstractActionTest<ResetConnectio
         assertTrue(layer.getDecryptorCipher() instanceof RecordNullCipher);
         assertEquals(context.getActiveClientKeySetType(), Tls13KeySetType.NONE);
         assertEquals(context.getActiveServerKeySetType(), Tls13KeySetType.NONE);
+        assertFalse(context.isHelloRetryRequestProcessed());
+        assertNull(context.getClientPskKeyExchangeModes());
+        assertNull(context.getClientKeyShareStoreEntryList());
+        assertNull(context.getSelectedGroup());
+        assertNull(context.getServerKeyShareStoreEntry());
         assertFalse(context.getTransportHandler().isClosed());
     }
 

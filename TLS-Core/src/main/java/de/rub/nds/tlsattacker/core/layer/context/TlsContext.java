@@ -411,6 +411,9 @@ public class TlsContext extends LayerContext {
 
     private byte[] lastClientHello;
 
+    /** Whether a TLS 1.3 HelloRetryRequest was processed on the current connection. */
+    private boolean helloRetryRequestProcessed;
+
     private Random random;
 
     private LinkedList<ProtocolMessage> messageBuffer;
@@ -2045,6 +2048,14 @@ public class TlsContext extends LayerContext {
 
     public void setLastClientHello(byte[] lastClientHello) {
         this.lastClientHello = lastClientHello;
+    }
+
+    public boolean isHelloRetryRequestProcessed() {
+        return helloRetryRequestProcessed;
+    }
+
+    public void setHelloRetryRequestProcessed(boolean helloRetryRequestProcessed) {
+        this.helloRetryRequestProcessed = helloRetryRequestProcessed;
     }
 
     public byte[] getExtensionCookie() {

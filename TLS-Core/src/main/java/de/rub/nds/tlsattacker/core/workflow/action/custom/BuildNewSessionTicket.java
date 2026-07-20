@@ -20,6 +20,7 @@ import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.annotation.XmlTransient;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -75,14 +76,7 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
         }
         message.setTicketLifetimeHint(86400);
 
-        byte[] origNonce = ticketOrigin.getTicketNonce().getValue();
-        int nonceLen = (origNonce != null) ? Math.min(origNonce.length, 8) : 4;
-        byte[] nonce = new byte[nonceLen];
-        if (origNonce != null && origNonce.length >= nonceLen) {
-            System.arraycopy(origNonce, 0, nonce, 0, nonceLen);
-        } else {
-            new java.security.SecureRandom().nextBytes(nonce);
-        }
+        byte[] nonce = serializedTicketNonce(ticketOrigin);
 
         byte[] identity = ticketOrigin.getIdentity().getValue();
         if (identity == null || identity.length == 0) {
@@ -107,6 +101,18 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
 
         container.add(message);
         setExecuted(true);
+    }
+
+    static byte[] serializedTicketNonce(SessionTicket ticket) {
+        byte[] original =
+                ticket.getTicketNonce() == null ? null : ticket.getTicketNonce().getValue();
+        if (original == null) {
+            return new byte[0];
+        }
+
+        // The benchmark's wolfSSL target accepts at most eight bytes here. Keep the wire
+        // normalization in one place so GeneratePSKAction derives from exactly these bytes.
+        return Arrays.copyOf(original, Math.min(original.length, 8));
     }
 
     @Override

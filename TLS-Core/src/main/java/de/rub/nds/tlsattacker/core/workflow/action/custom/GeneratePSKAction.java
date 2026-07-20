@@ -79,7 +79,7 @@ public class GeneratePSKAction extends ConnectionBoundAction {
         }
         pskSet.setTicketAge(getTicketAge());
         if (ticket.getTicketNonce() != null) {
-            pskSet.setTicketNonce(ticket.getTicketNonce().getValue());
+            pskSet.setTicketNonce(BuildNewSessionTicket.serializedTicketNonce(ticket));
         }
         // only derive PSK if client finished was already sent, because full handshake transcript is
         // required

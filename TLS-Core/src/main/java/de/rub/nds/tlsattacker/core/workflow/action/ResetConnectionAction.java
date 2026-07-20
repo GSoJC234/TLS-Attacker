@@ -94,6 +94,11 @@ public class ResetConnectionAction extends ConnectionBoundAction {
             LOGGER.info("Resetting TLS 1.3 HRR and PSK values");
             tlsContext.setExtensionCookie(null);
             tlsContext.setLastClientHello(null);
+            tlsContext.setHelloRetryRequestProcessed(false);
+            tlsContext.setClientPskKeyExchangeModes(null);
+            tlsContext.setClientKeyShareStoreEntryList(null);
+            tlsContext.setSelectedGroup(null);
+            tlsContext.setServerKeyShareStoreEntry(null);
             tlsContext.setPsk(null);
             tlsContext.setEarlyDataPSKIdentity(null);
             tlsContext.setEarlyDataPsk(null);

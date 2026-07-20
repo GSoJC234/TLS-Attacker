@@ -11,16 +11,19 @@ package de.rub.nds.tlsattacker.core.protocol.handler;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.*;
 import de.rub.nds.tlsattacker.core.crypto.HKDFunction;
 import de.rub.nds.tlsattacker.core.protocol.message.ServerHelloMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.KeyShareExtensionMessage;
+import de.rub.nds.tlsattacker.core.protocol.message.extension.PreSharedKeyExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareStoreEntry;
 import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import java.math.BigInteger;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 public class ServerHelloHandlerTest
@@ -135,20 +138,143 @@ public class ServerHelloHandlerTest
     }
 
     @Test
-    public void testadjustContextTls13MissingKeyShareAndPskWolfSslDockerMetadata()
+    public void testadjustContextTls13WolfSsl560HrrP521MissingKeyShare()
             throws Exception {
         ServerHelloMessage message = createTls13ServerHello();
         context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
         context.getConfig().setTargetLibraryName("wolfSSL");
         context.getConfig().setTargetLibraryVersion("5.6.0");
-        context.getConfig().setTargetExecutionMode("docker");
         context.getConfig().setTargetRuntimePlatform("linux-amd64");
-        context.getConfig().setTargetBuildProfile("local-repro-no-psk");
+        processHelloRetryRequest(NamedGroup.SECP521R1);
 
         handler.adjustContext(message);
 
         assertArrayEquals(
                 deriveHandshakeSecret(new byte[32], new byte[512]), context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl560WithoutHrrDoesNotSelectP521Model() {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.6.0");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        context.setSelectedGroup(NamedGroup.SECP521R1);
+
+        assertThrows(IllegalStateException.class, () -> handler.adjustContext(message));
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl560HrrP256DoesNotSelectP521Model() {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.6.0");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        processHelloRetryRequest(NamedGroup.SECP256R1);
+
+        assertThrows(IllegalStateException.class, () -> handler.adjustContext(message));
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl584HrrP521MissingKeyShare()
+            throws Exception {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.4");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        processHelloRetryRequest(NamedGroup.SECP521R1);
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[32], new byte[578]), context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl582P256PskDheMissingKeyShare()
+            throws Exception {
+        ServerHelloMessage message = createTls13SelectedPskServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.setPsk(new byte[] {1, 2, 3, 4});
+        context.getConfig().setUsePsk(true);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.2");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        context.setClientPskKeyExchangeModes(List.of(PskKeyExchangeMode.PSK_DHE_KE));
+        context.setClientKeyShareStoreEntryList(
+                List.of(new KeyShareStoreEntry(NamedGroup.SECP256R1, new byte[] {1})));
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[] {1, 2, 3, 4}, new byte[32]),
+                context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl582PskKeDoesNotSelectP256Model()
+            throws Exception {
+        ServerHelloMessage message = createTls13SelectedPskServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.setPsk(new byte[] {1, 2, 3, 4});
+        context.getConfig().setUsePsk(true);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.2");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        context.setClientPskKeyExchangeModes(List.of(PskKeyExchangeMode.PSK_KE));
+        context.setClientKeyShareStoreEntryList(
+                List.of(new KeyShareStoreEntry(NamedGroup.SECP256R1, new byte[] {1})));
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[] {1, 2, 3, 4}, new byte[0]),
+                context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl582P521DoesNotSelectP256Model()
+            throws Exception {
+        ServerHelloMessage message = createTls13SelectedPskServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.setPsk(new byte[] {1, 2, 3, 4});
+        context.getConfig().setUsePsk(true);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.2");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        context.setClientPskKeyExchangeModes(List.of(PskKeyExchangeMode.PSK_DHE_KE));
+        context.setClientKeyShareStoreEntryList(
+                List.of(new KeyShareStoreEntry(NamedGroup.SECP521R1, new byte[] {1})));
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[] {1, 2, 3, 4}, new byte[0]),
+                context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl582NonLinuxDoesNotSelectP256Model()
+            throws Exception {
+        ServerHelloMessage message = createTls13SelectedPskServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.setPsk(new byte[] {1, 2, 3, 4});
+        context.getConfig().setUsePsk(true);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.2");
+        context.getConfig().setTargetRuntimePlatform("darwin-arm64");
+        context.setClientPskKeyExchangeModes(List.of(PskKeyExchangeMode.PSK_DHE_KE));
+        context.setClientKeyShareStoreEntryList(
+                List.of(new KeyShareStoreEntry(NamedGroup.SECP256R1, new byte[] {1})));
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[] {1, 2, 3, 4}, new byte[0]),
+                context.getHandshakeSecret());
     }
 
     @Test
@@ -177,6 +303,38 @@ public class ServerHelloHandlerTest
         assertThrows(IllegalStateException.class, () -> handler.adjustContext(message));
     }
 
+    @Test
+    public void testadjustContextTls13WolfSsl584WithoutHrrDoesNotSelectP521Model()
+            throws Exception {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.4");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        context.setSelectedGroup(NamedGroup.SECP521R1);
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[32], new byte[0]), context.getHandshakeSecret());
+    }
+
+    @Test
+    public void testadjustContextTls13WolfSsl584HrrP256DoesNotSelectP521Model()
+            throws Exception {
+        ServerHelloMessage message = createTls13ServerHello();
+        context.setTalkingConnectionEndType(ConnectionEndType.SERVER);
+        context.getConfig().setTargetLibraryName("wolfSSL");
+        context.getConfig().setTargetLibraryVersion("5.8.4");
+        context.getConfig().setTargetRuntimePlatform("linux-amd64");
+        processHelloRetryRequest(NamedGroup.SECP256R1);
+
+        handler.adjustContext(message);
+
+        assertArrayEquals(
+                deriveHandshakeSecret(new byte[32], new byte[0]), context.getHandshakeSecret());
+    }
+
     private ServerHelloMessage createTls13ServerHello() {
         ServerHelloMessage message = new ServerHelloMessage();
         message.setUnixTime(new byte[] {0, 1, 2});
@@ -186,6 +344,31 @@ public class ServerHelloHandlerTest
         message.setSessionId(new byte[] {6, 6, 6});
         message.setProtocolVersion(ProtocolVersion.TLS13.getValue());
         return message;
+    }
+
+    private ServerHelloMessage createTls13SelectedPskServerHello() {
+        ServerHelloMessage message = createTls13ServerHello();
+        PreSharedKeyExtensionMessage selectedPsk = new PreSharedKeyExtensionMessage();
+        selectedPsk.setSelectedIdentity(0);
+        message.addExtension(selectedPsk);
+        return message;
+    }
+
+    private void processHelloRetryRequest(NamedGroup selectedGroup) {
+        ServerHelloMessage helloRetryRequest = createTls13ServerHello();
+        helloRetryRequest.setRandom(ServerHelloMessage.getHelloRetryRequestRandom());
+        helloRetryRequest.setCompleteResultingMessage(new byte[] {2});
+        KeyShareEntry entry = new KeyShareEntry(selectedGroup, null);
+        entry.setGroup(selectedGroup.getValue());
+        KeyShareExtensionMessage extension = new KeyShareExtensionMessage();
+        extension.setRetryRequestMode(true);
+        extension.getKeyShareList().add(entry);
+        helloRetryRequest.addExtension(extension);
+
+        handler.adjustContext(helloRetryRequest);
+
+        assertTrue(context.isHelloRetryRequestProcessed());
+        assertSame(selectedGroup, context.getSelectedGroup());
     }
 
     private void addKeyShareExtension(

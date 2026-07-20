@@ -61,8 +61,12 @@ public class AddHRRKeyShareAction extends AddExtensionAction<NamedGroup> {
         message.setExtensionType(ExtensionType.KEY_SHARE.getValue());
         message.setRetryRequestMode(true);
 
-        message.setKeyShareListBytes((extension_container.get(0)).getValue());
+        NamedGroup selectedGroup = extension_container.get(0);
+        message.setKeyShareListBytes(selectedGroup.getValue());
         message.setKeyShareListLength(message.getKeyShareListBytes().getValue().length);
+        KeyShareEntry selectedGroupEntry = new KeyShareEntry(selectedGroup, null);
+        selectedGroupEntry.setGroup(selectedGroup.getValue());
+        message.getKeyShareList().add(selectedGroupEntry);
 
         KeyShareExtensionSerializer serializer = new KeyShareExtensionSerializer(message, endType);
         message.setExtensionContent(serializer.serializeExtensionContent());

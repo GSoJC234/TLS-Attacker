@@ -49,6 +49,9 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
     @XmlTransient
     private List<SignatureAndHashAlgorithm> signature_and_hash_algorithm_container = null;
 
+    @XmlTransient
+    private List<SignatureAndHashAlgorithm> signingSignatureAndHashAlgorithmContainer = null;
+
     public BuildCertificateVerifyAction() {
         super();
     }
@@ -76,6 +79,17 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         this.signature_and_hash_algorithm_container = signature_and_hash_algorithm_container;
     }
 
+    /**
+     * Selects the algorithm used to create the signature independently of the algorithm encoded
+     * on the wire. If this setter is not used, the wire algorithm is also used for signing, which
+     * preserves the historical behavior of this action.
+     */
+    public void setSigningSignatureAndHashAlgorithmContainer(
+            List<SignatureAndHashAlgorithm> signingSignatureAndHashAlgorithmContainer) {
+        this.signingSignatureAndHashAlgorithmContainer =
+                signingSignatureAndHashAlgorithmContainer;
+    }
+
     public void setCertificatePrivateKey(List<byte[]> certificatePrivateKey_container) {
         this.certificatePrivateKey_container = certificatePrivateKey_container;
     }
@@ -97,18 +111,20 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
                 this.certificatePrivateKey_container.size() > 1
                         ? new BigInteger(1, this.certificatePrivateKey_container.get(1))
                         : null;
-        SignatureAndHashAlgorithm algorithm;
+        SignatureAndHashAlgorithm wireAlgorithm;
         if(signature_and_hash_algorithm_container != null){
-            algorithm = signature_and_hash_algorithm_container.get(0);
+            wireAlgorithm = signature_and_hash_algorithm_container.get(0);
         } else {
-            algorithm = context.getChooser().getSelectedSigHashAlgorithm();
+            wireAlgorithm = context.getChooser().getSelectedSigHashAlgorithm();
         }
+        SignatureAndHashAlgorithm signingAlgorithm = resolveSigningAlgorithm(wireAlgorithm);
 
-        context.getTlsContext().setSelectedSignatureAndHashAlgorithm(algorithm);
+        context.getTlsContext().setSelectedSignatureAndHashAlgorithm(wireAlgorithm);
 
         ConnectionEndType endType = context.getConnection().getLocalConnectionEndType();
         X509Context x509 = context.getTlsContext().getTalkingX509Context();
-        setX509SubjectPrivateKey(x509, algorithm.getSignatureAlgorithm(), privateKey, rsaModulus);
+        setX509SubjectPrivateKey(
+                x509, signingAlgorithm.getSignatureAlgorithm(), privateKey, rsaModulus);
 
         CertificateVerifyMessage message = new CertificateVerifyMessage();
         message.setShouldPrepareDefault(false);
@@ -117,13 +133,13 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         } else {
             message.setType(HandshakeMessageType.CERTIFICATE_VERIFY.getValue());
         }
-        message.setSignatureHashAlgorithm(algorithm.getByteValue());
+        message.setSignatureHashAlgorithm(wireAlgorithm.getByteValue());
 
         if (signature_container != null) {
             message.setSignature(signature_container.get(0));
         } else {
             try {
-                message.setSignature(createSignature(message, algorithm, state));
+                message.setSignature(createSignature(message, signingAlgorithm, state));
             } catch (CryptoException e) {
                 throw new ActionExecutionException("Could not create signature", e);
             }
@@ -140,6 +156,14 @@ public class BuildCertificateVerifyAction extends ConnectionBoundAction {
         container.add(message);
         System.out.println("CertificateVerify: " + message);
         setExecuted(true);
+    }
+
+    SignatureAndHashAlgorithm resolveSigningAlgorithm(
+            SignatureAndHashAlgorithm wireAlgorithm) {
+        if (signingSignatureAndHashAlgorithmContainer == null) {
+            return wireAlgorithm;
+        }
+        return signingSignatureAndHashAlgorithmContainer.get(0);
     }
 
     private void setX509SubjectPrivateKey(
