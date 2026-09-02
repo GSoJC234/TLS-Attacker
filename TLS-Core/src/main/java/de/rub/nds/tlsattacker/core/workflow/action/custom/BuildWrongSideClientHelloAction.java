@@ -11,6 +11,7 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom;
 import de.rub.nds.tlsattacker.core.constants.CipherSuite;
 import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.HandshakeByteLength;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.NamedGroup;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
@@ -28,6 +29,7 @@ import jakarta.xml.bind.annotation.XmlTransient;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @XmlRootElement(name = "BuildWrongSideClientHelloAction")
@@ -86,40 +88,53 @@ public class BuildWrongSideClientHelloAction extends ConnectionBoundAction {
 
     @Override
     public void execute(State state) throws ActionExecutionException {
-        validateInputs();
+        TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
+        ProtocolVersion selectedVersion =
+                versionContainer != null && !versionContainer.isEmpty()
+                        ? versionContainer.get(0)
+                        : tlsContext.getChooser().getSelectedProtocolVersion();
+        CipherSuite selectedCipherSuite = tlsContext.getChooser().getSelectedCipherSuite();
+        List<CipherSuite> cipherSuites =
+                suiteContainer != null && !suiteContainer.isEmpty()
+                        ? suiteContainer
+                        : selectedCipherSuite == null ? List.of() : List.of(selectedCipherSuite);
+        byte[] random =
+                randomContainer != null && !randomContainer.isEmpty()
+                        ? randomContainer.get(0)
+                        : tlsContext.getChooser().getServerRandom();
+        CompressionMethod selectedCompressionMethod =
+                tlsContext.getChooser().getSelectedCompressionMethod();
+        List<CompressionMethod> compressionMethods =
+                compressionContainer != null && !compressionContainer.isEmpty()
+                        ? compressionContainer
+                        : selectedCompressionMethod == null
+                                ? List.of()
+                                : List.of(selectedCompressionMethod);
+
+        validateInputs(selectedVersion, cipherSuites, random, compressionMethods);
 
         ClientHelloMessage message = new ClientHelloMessage();
         message.setShouldPrepareDefault(false);
         message.setType(HandshakeMessageType.CLIENT_HELLO.getValue());
 
-        ProtocolVersion selectedVersion =
-                versionContainer != null && !versionContainer.isEmpty()
-                        ? versionContainer.get(0)
-                        : state.getTlsContext(getConnectionAlias())
-                                .getChooser()
-                                .getSelectedProtocolVersion();
-        if (selectedVersion == null) {
-            throw new ActionExecutionException("No protocol version configured");
-        }
-        TlsContext tlsContext = state.getTlsContext(getConnectionAlias());
         if (tlsContext.getSelectedProtocolVersion() == null) {
             tlsContext.setSelectedProtocolVersion(selectedVersion);
         }
         message.setProtocolVersion(selectedVersion.getValue());
         message.setAdjustContext(false);
 
-        message.setUnixTime(new byte[] {0x00, 0x00});
-        message.setRandom(randomContainer.get(0));
+        message.setUnixTime(new byte[] {0x00, 0x00, 0x00, 0x00});
+        message.setRandom(random);
 
         // The wrong-side ClientHello used for CVE-2021-44718 must be a real ClientHello
         // body, but it intentionally does not reuse the server-side session id.
         message.setSessionId(new byte[] {});
         message.setSessionIdLength(0);
 
-        message.setCipherSuites(serializeCipherSuites(suiteContainer));
+        message.setCipherSuites(serializeCipherSuites(cipherSuites));
         message.setCipherSuiteLength(message.getCipherSuites().getValue().length);
 
-        message.setCompressions(serializeCompressionMethods(compressionContainer));
+        message.setCompressions(serializeCompressionMethods(compressionMethods));
         message.setCompressionLength(message.getCompressions().getValue().length);
 
         byte[] extensions = buildDefaultClientHelloExtensions();
@@ -135,7 +150,11 @@ public class BuildWrongSideClientHelloAction extends ConnectionBoundAction {
         setExecuted(true);
     }
 
-    private void validateInputs() {
+    private void validateInputs(
+            ProtocolVersion selectedVersion,
+            List<CipherSuite> cipherSuites,
+            byte[] random,
+            List<CompressionMethod> compressionMethods) {
         if (typeContainer != null
                 && !typeContainer.isEmpty()
                 && typeContainer.get(0) != HandshakeMessageType.CLIENT_HELLO) {
@@ -145,14 +164,21 @@ public class BuildWrongSideClientHelloAction extends ConnectionBoundAction {
         if (container == null) {
             throw new ActionExecutionException("No output container configured");
         }
-        if (suiteContainer == null || suiteContainer.isEmpty()) {
+        if (selectedVersion == null) {
+            throw new ActionExecutionException("No protocol version configured");
+        }
+        if (cipherSuites == null
+                || cipherSuites.isEmpty()
+                || cipherSuites.stream().anyMatch(Objects::isNull)) {
             throw new ActionExecutionException("No cipher suite configured");
         }
-        if (randomContainer == null || randomContainer.isEmpty() || randomContainer.get(0) == null) {
+        if (random == null || random.length != HandshakeByteLength.RANDOM) {
             throw new ActionExecutionException("No ClientHello random configured");
         }
-        if (compressionContainer == null || compressionContainer.isEmpty()) {
-            compressionContainer = List.of(CompressionMethod.NULL);
+        if (compressionMethods == null
+                || compressionMethods.isEmpty()
+                || compressionMethods.stream().anyMatch(Objects::isNull)) {
+            throw new ActionExecutionException("No compression method configured");
         }
     }
 
