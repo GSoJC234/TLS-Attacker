@@ -18,6 +18,7 @@ import de.rub.nds.tlsattacker.core.state.Context;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.action.ConnectionBoundAction;
 import de.rub.nds.tlsattacker.core.workflow.action.executor.ActionOption;
+import de.rub.nds.tlsattacker.core.workflow.observation.ExecutionEventEmitter;
 import de.rub.nds.tlsattacker.transport.TransportHandler;
 import de.rub.nds.tlsattacker.transport.TransportHandlerFactory;
 import de.rub.nds.tlsattacker.transport.TransportHandlerType;
@@ -89,7 +90,17 @@ public class AcceptAction extends ConnectionBoundAction {
             context.setTransportHandler(TransportHandlerFactory.createTransportHandler(connection));
             try {
                 context.getTransportHandler().preInitialize(); // Bind
+                ExecutionEventEmitter.emit(
+                        "TESTER",
+                        "SERVER_READY",
+                        "connectionId",
+                        connectionAlias,
+                        "host",
+                        ip,
+                        "port",
+                        port);
                 context.getTransportHandler().initialize();    // Accept
+                emitClientConnected();
             } catch (IOException e) {
                 LOGGER.debug(TEST_MARKER, "Failed to initialize TransportHandler (Bind/Accept failed). Port: " + port, e);
                 throw new RuntimeException(e);
@@ -97,6 +108,7 @@ public class AcceptAction extends ConnectionBoundAction {
         } else {
             try {
                 transportHandler.initialize();  // Accept
+                emitClientConnected();
             } catch (IOException e) {
                 LOGGER.debug(TEST_MARKER, "Failed to initialize TransportHandler (Bind/Accept failed). Port: " + port, e);
                 throw new RuntimeException(e);
@@ -105,6 +117,11 @@ public class AcceptAction extends ConnectionBoundAction {
 
         LOGGER.debug(TEST_MARKER, "Accepting connection!");
         setExecuted(true);
+    }
+
+    private void emitClientConnected() {
+        ExecutionEventEmitter.emit(
+                "TESTER", "CLIENT_CONNECTED", "connectionId", connectionAlias);
     }
 
     private TransportHandler findExistingTransportHandler(State state, int port) {
