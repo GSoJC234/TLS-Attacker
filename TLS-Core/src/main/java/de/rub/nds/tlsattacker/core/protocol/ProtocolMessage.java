@@ -133,6 +133,26 @@ public abstract class ProtocolMessage extends Message<TlsContext> {
         return protocolMessageType;
     }
 
+    public final StructuredLogValueBuilder toStructuredValue() {
+        StructuredLogValueBuilder builder = new StructuredLogValueBuilder();
+        builder.add("contentType", protocolMessageType);
+        addStructuredLogFields(builder);
+        return builder;
+    }
+
+    /** Returns a deterministic, single-line representation intended for protocol trace logs. */
+    public final String toStructuredString() {
+        return toStructuredValue().toString();
+    }
+
+    /** Adds fields owned by this message class to the protocol trace representation. */
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {}
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + ":\n  Content Type: " + protocolMessageType;
+    }
+
     @Override
     public abstract ProtocolMessageHandler<? extends ProtocolMessage> getHandler(
             TlsContext context);

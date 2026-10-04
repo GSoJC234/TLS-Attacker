@@ -17,6 +17,8 @@ import de.rub.nds.protocol.constants.SignatureAlgorithm;
 import de.rub.nds.protocol.crypto.signature.SignatureCalculator;
 import de.rub.nds.protocol.crypto.signature.SignatureComputations;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
+import de.rub.nds.tlsattacker.core.constants.SignatureAndHashAlgorithm;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.message.computations.KeyExchangeComputations;
 import java.util.Objects;
 
@@ -120,6 +122,30 @@ public abstract class ServerKeyExchangeMessage extends HandshakeMessage {
 
     public void setPublicKey(byte[] publicKey) {
         this.publicKey = ModifiableVariableFactory.safelySetValue(this.publicKey, publicKey);
+    }
+
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        byte[] algorithmBytes =
+                signatureAndHashAlgorithm == null
+                        ? null
+                        : signatureAndHashAlgorithm.getValue();
+        SignatureAndHashAlgorithm algorithm =
+                algorithmBytes == null
+                        ? null
+                        : SignatureAndHashAlgorithm.getSignatureAndHashAlgorithm(algorithmBytes);
+        if (algorithm != null) {
+            builder.add("signatureAlgorithms", algorithm);
+        } else {
+            builder.addHex("signatureAlgorithms", algorithmBytes);
+        }
+        builder.add(
+                "signatureLength", signatureLength == null ? null : signatureLength.getValue());
+        builder.addHex("signature", signature == null ? null : signature.getValue());
+        builder.add(
+                "publicKeyLength", publicKeyLength == null ? null : publicKeyLength.getValue());
+        builder.addHex("publicKey", publicKey == null ? null : publicKey.getValue());
     }
 
     @Override

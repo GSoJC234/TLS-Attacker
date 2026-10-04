@@ -14,13 +14,16 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.SignatureAndHashAlgorithm;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.SignatureAlgorithmsCertExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.SignatureAlgorithmsCertExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.SignatureAlgorithmsCertExtensionPreparator;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.SignatureAlgorithmsCertExtensionSerializer;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.InputStream;
+import java.util.List;
 
 /** This extension is defined in RFC8446 */
 @XmlRootElement(name = "SignatureAlgorithmsCertExtension")
@@ -65,6 +68,35 @@ public class SignatureAlgorithmsCertExtensionMessage extends ExtensionMessage {
 
     public void setSignatureAndHashAlgorithms(ModifiableByteArray signatureAndHashAlgorithms) {
         this.signatureAndHashAlgorithms = signatureAndHashAlgorithms;
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "signatureAlgorithmsLength",
+                signatureAndHashAlgorithmsLength == null
+                        ? null
+                        : signatureAndHashAlgorithmsLength.getValue());
+        byte[] values =
+                signatureAndHashAlgorithms == null
+                        ? null
+                        : signatureAndHashAlgorithms.getValue();
+        if (values == null) {
+            builder.add("signatureAlgorithms", null);
+            return;
+        }
+        try {
+            List<SignatureAndHashAlgorithm> algorithms =
+                    SignatureAndHashAlgorithm.getSignatureAndHashAlgorithms(values);
+            if (algorithms.size() * 2 == values.length) {
+                builder.add("signatureAlgorithms", algorithms);
+                return;
+            }
+        } catch (RuntimeException ignored) {
+            // Preserve malformed or unknown values as bytes.
+        }
+        builder.addHex("signatureAlgorithms", values);
     }
 
     @Override

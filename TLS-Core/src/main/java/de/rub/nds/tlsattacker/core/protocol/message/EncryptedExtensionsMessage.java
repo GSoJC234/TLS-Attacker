@@ -8,7 +8,6 @@
  */
 package de.rub.nds.tlsattacker.core.protocol.message;
 
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
@@ -49,39 +48,12 @@ public class EncryptedExtensionsMessage extends HandshakeMessage {
 
     @Override
     public String toCompactString() {
-        return this.toString();
+        return super.toCompactString();
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  extension: ");
-        if (getExtensions() == null) {
-            sb.append("null");
-        } else {
-            for (ExtensionMessage e : getExtensions()) {
-                sb.append(e.toCompactString());
-            }
-        }
-        sb.append("\n  extensionLen: ");
-        if (getExtensionsLength() != null && getExtensionsLength().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionsLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        return sb.toString();
+        return "EncryptedExtensionMessage:\n  Extensions: " + getExtensions();
     }
 
     @Override

@@ -15,6 +15,7 @@ import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.ChangeCipherSpecHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.ChangeCipherSpecParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.ChangeCipherSpecPreparator;
@@ -46,14 +47,22 @@ public class ChangeCipherSpecMessage extends ProtocolMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.addHex(
+                "changeCipherSpecType",
+                ccsProtocolType == null ? null : ccsProtocolType.getValue());
+    }
+
+    @Override
     public String toCompactString() {
-        return this.toString();
+        return "CHANGE_CIPHER_SPEC";
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  changeCipherSpecType: ");
+        StringBuilder sb = new StringBuilder("ChangeCipherSpecMessage:");
+        sb.append("\n  CCS ProtocolType: ");
         if (ccsProtocolType != null && ccsProtocolType.getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(ccsProtocolType.getValue()));
         } else {

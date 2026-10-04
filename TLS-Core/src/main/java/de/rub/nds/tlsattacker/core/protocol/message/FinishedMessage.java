@@ -14,6 +14,7 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.FinishedHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.FinishedParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.FinishedPreparator;
@@ -45,27 +46,21 @@ public class FinishedMessage extends HandshakeMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        builder.addHex("verifyData", verifyData == null ? null : verifyData.getValue());
+    }
+
+    @Override
     public String toCompactString() {
-        return this.toString();
+        return super.toCompactString();
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  verifyData: ");
-        if (verifyData != null && verifyData.getOriginalValue() != null) {
+        StringBuilder sb = new StringBuilder("FinishedMessage:");
+        sb.append("\n  Verify Data: ");
+        if (verifyData != null && verifyData.getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(verifyData.getValue()));
         } else {
             sb.append("null");

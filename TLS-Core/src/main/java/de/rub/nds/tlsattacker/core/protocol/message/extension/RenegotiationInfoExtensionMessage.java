@@ -14,6 +14,7 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.RenegotiationInfoExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.RenegotiationInfoExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.RenegotiationInfoExtensionPreparator;
@@ -58,6 +59,17 @@ public class RenegotiationInfoExtensionMessage extends ExtensionMessage {
         this.renegotiationInfoLength =
                 ModifiableVariableFactory.safelySetValue(
                         this.renegotiationInfoLength, renegotiationInfoLength);
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "renegotiationInfoLength",
+                renegotiationInfoLength == null ? null : renegotiationInfoLength.getValue());
+        builder.addHex(
+                "renegotiationInfo",
+                renegotiationInfo == null ? null : renegotiationInfo.getValue());
     }
 
     @Override

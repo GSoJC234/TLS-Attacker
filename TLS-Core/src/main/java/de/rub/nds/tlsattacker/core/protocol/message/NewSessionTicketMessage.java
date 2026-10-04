@@ -16,6 +16,7 @@ import de.rub.nds.modifiablevariable.longint.ModifiableLong;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.NewSessionTicketHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.EarlyDataExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.parser.NewSessionTicketParser;
@@ -64,6 +65,44 @@ public class NewSessionTicketMessage extends HandshakeMessage {
 
     public SessionTicket getTicket() {
         return ticket;
+    }
+
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        builder.add(
+                "ticketLifetimeHint",
+                ticketLifetimeHint == null ? null : ticketLifetimeHint.getValue());
+        StructuredLogValueBuilder ticketValue = new StructuredLogValueBuilder();
+        ticketValue.addHex(
+                "keyName", ticket.getKeyName() == null ? null : ticket.getKeyName().getValue());
+        ticketValue.addHex("iv", ticket.getIV() == null ? null : ticket.getIV().getValue());
+        ticketValue.add(
+                "encryptedStateLength",
+                ticket.getEncryptedStateLength() == null
+                        ? null
+                        : ticket.getEncryptedStateLength().getValue());
+        ticketValue.addHex(
+                "encryptedState",
+                ticket.getEncryptedState() == null ? null : ticket.getEncryptedState().getValue());
+        ticketValue.addHex("mac", ticket.getMAC() == null ? null : ticket.getMAC().getValue());
+        ticketValue.add(
+                "identityLength",
+                ticket.getIdentityLength() == null ? null : ticket.getIdentityLength().getValue());
+        ticketValue.addHex(
+                "identity", ticket.getIdentity() == null ? null : ticket.getIdentity().getValue());
+        ticketValue.addHex(
+                "ticketAgeAdd",
+                ticket.getTicketAgeAdd() == null ? null : ticket.getTicketAgeAdd().getValue());
+        ticketValue.add(
+                "ticketNonceLength",
+                ticket.getTicketNonceLength() == null
+                        ? null
+                        : ticket.getTicketNonceLength().getValue());
+        ticketValue.addHex(
+                "ticketNonce",
+                ticket.getTicketNonce() == null ? null : ticket.getTicketNonce().getValue());
+        builder.add("ticket", ticketValue);
     }
 
     @Override

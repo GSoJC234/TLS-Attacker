@@ -18,6 +18,7 @@ import de.rub.nds.tlsattacker.core.constants.HeartbeatMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.HeartbeatMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.HeartbeatMessageParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.HeartbeatMessagePreparator;
@@ -94,6 +95,25 @@ public class HeartbeatMessage extends ProtocolMessage {
 
     public void setPadding(byte[] padding) {
         this.padding = ModifiableVariableFactory.safelySetValue(this.padding, padding);
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        Byte typeValue =
+                heartbeatMessageType == null ? null : heartbeatMessageType.getValue();
+        HeartbeatMessageType type =
+                typeValue == null
+                        ? null
+                        : HeartbeatMessageType.getHeartbeatMessageType(typeValue);
+        if (type != null) {
+            builder.add("type", type);
+        } else {
+            builder.addHex("type", typeValue == null ? null : new byte[] {typeValue});
+        }
+        builder.add("payloadLength", payloadLength == null ? null : payloadLength.getValue());
+        builder.addHex("payload", payload == null ? null : payload.getValue());
+        builder.addHex("padding", padding == null ? null : padding.getValue());
     }
 
     @Override

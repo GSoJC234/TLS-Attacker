@@ -11,13 +11,13 @@ package de.rub.nds.tlsattacker.core.protocol.message;
 import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.modifiablevariable.util.UnformattedByteArrayAdapter;
 import de.rub.nds.tlsattacker.core.constants.AlertDescription;
 import de.rub.nds.tlsattacker.core.constants.AlertLevel;
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.AlertHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.AlertParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.AlertPreparator;
@@ -85,36 +85,62 @@ public class AlertMessage extends ProtocolMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        Byte levelValue = level == null ? null : level.getValue();
+        AlertLevel resolvedLevel =
+                levelValue == null ? null : AlertLevel.getAlertLevel(levelValue);
+        if (resolvedLevel != null) {
+            builder.add("level", resolvedLevel);
+        } else {
+            builder.addHex("level", levelValue == null ? null : new byte[] {levelValue});
+        }
+        Byte descriptionValue = description == null ? null : description.getValue();
+        AlertDescription resolvedDescription =
+                descriptionValue == null
+                        ? null
+                        : AlertDescription.getAlertDescription(descriptionValue);
+        if (resolvedDescription != null) {
+            builder.add("description", resolvedDescription);
+        } else {
+            builder.addHex(
+                    "description",
+                    descriptionValue == null ? null : new byte[] {descriptionValue});
+        }
+    }
+
+    @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  alertLev: ");
-        if (level != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{level.getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  alertDesc: ");
-        if (description != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{description.getValue()}));
-        } else {
-            sb.append("null");
-        }
-        return sb.toString();
+        StringBuilder builder = new StringBuilder("AlertMessage:");
+        builder.append("\n  Level: ").append(level == null ? null : level.getValue());
+        builder.append("\n  Description: ")
+                .append(description == null ? null : description.getValue());
+        return builder.toString();
     }
 
     @Override
     public String toCompactString() {
-        return this.toString();
+        AlertLevel resolvedLevel =
+                level == null || level.getValue() == null
+                        ? null
+                        : AlertLevel.getAlertLevel(level.getValue());
+        AlertDescription resolvedDescription =
+                description == null || description.getValue() == null
+                        ? null
+                        : AlertDescription.getAlertDescription(description.getValue());
+        if (resolvedLevel == null && resolvedDescription == null) {
+            return "ALERT";
+        }
+        return "ALERT ("
+                + (resolvedLevel == null ? "UNKNOWN_LEVEL" : resolvedLevel)
+                + ", "
+                + (resolvedDescription == null ? "UNKNOWN_DESCRIPTION" : resolvedDescription)
+                + ")";
     }
 
     @Override
     public String toShortString() {
-        AlertDescription alertDescription =
-                AlertDescription.getAlertDescription(description.getValue());
-        if (alertDescription == null) {
-            return "UKNOWN ALERT";
-        }
-        return alertDescription.toString();
+        return "ALERT";
     }
 
     @Override

@@ -16,13 +16,13 @@ import de.rub.nds.modifiablevariable.bool.ModifiableBoolean;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.HandshakeMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.parser.HandshakeMessageParser;
@@ -197,6 +197,56 @@ public abstract class HandshakeMessage extends ProtocolMessage {
         return handshakeMessageType;
     }
 
+    @Override
+    protected final void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        addStructuredLogHandshakeHeaderFields(builder);
+        addStructuredLogHandshakeBodyFields(builder);
+        addStructuredLogExtensionFields(builder);
+    }
+
+    private void addStructuredLogHandshakeHeaderFields(StructuredLogValueBuilder builder) {
+        Byte encodedType = type == null ? null : type.getValue();
+        HandshakeMessageType resolvedType =
+                encodedType == null
+                        ? handshakeMessageType
+                        : HandshakeMessageType.getMessageType(encodedType);
+        if (resolvedType != null && resolvedType != HandshakeMessageType.UNKNOWN) {
+            builder.add("handshakeType", resolvedType);
+        } else {
+            builder.addHex(
+                    "handshakeType", encodedType == null ? null : new byte[] {encodedType});
+        }
+        builder.add("handshakeLength", length == null ? null : length.getValue());
+        if (messageSequence != null) {
+            builder.add("messageSequence", messageSequence.getValue());
+        }
+        if (isRetransmission()) {
+            builder.add("retransmission", true);
+        }
+    }
+
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {}
+
+    private void addStructuredLogExtensionFields(StructuredLogValueBuilder builder) {
+        if (extensionsLength == null && extensions == null && extensionBytes == null) {
+            return;
+        }
+        builder.add(
+                "extensionsLength",
+                extensionsLength == null ? null : extensionsLength.getValue());
+        if (extensions == null) {
+            builder.addHex(
+                    "extensions", extensionBytes == null ? null : extensionBytes.getValue());
+        } else {
+            List<StructuredLogValueBuilder> extensionValues = new ArrayList<>();
+            for (ExtensionMessage extension : extensions) {
+                extensionValues.add(extension == null ? null : extension.toStructuredValue());
+            }
+            builder.add("extensions", extensionValues);
+        }
+    }
+
     public void setIncludeInDigest(ModifiableBoolean includeInDigest) {
         this.includeInDigest = includeInDigest;
     }
@@ -238,13 +288,19 @@ public abstract class HandshakeMessage extends ProtocolMessage {
 
     @Override
     public String toString() {
-        return "";
+        StringBuilder builder = new StringBuilder("HandshakeMessage:");
+        builder.append("\n  Type: ").append(type == null ? null : type.getValue());
+        builder.append("\n  Length: ").append(length == null ? null : length.getValue());
+        return builder.toString();
     }
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(handshakeMessageType.getName());
+        StringBuilder sb =
+                new StringBuilder(
+                        handshakeMessageType == null
+                                ? "UNKNOWN_HANDSHAKE"
+                                : handshakeMessageType.name());
         if (isRetransmission()) {
             sb.append(" (ret.)");
         }

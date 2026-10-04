@@ -8,9 +8,9 @@
  */
 package de.rub.nds.tlsattacker.core.workflow.observation;
 
-import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.tlsattacker.core.exceptions.SkipActionException;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.record.Record;
 import de.rub.nds.tlsattacker.core.state.State;
 import de.rub.nds.tlsattacker.core.workflow.WorkflowExecutor;
@@ -232,11 +232,11 @@ public class ExecutionEventWorkflowExecutor extends WorkflowExecutor {
             if (isEmpty(records)) {
                 records = sendAction.getConfiguredRecords();
             }
-            emitMessageTrace("Sending", actionIndex, messages, records);
+            emitMessageTrace("SENT", actionIndex, messages, records);
         } else if (action instanceof ReceiveOneAction) {
             ReceiveOneAction receiveAction = (ReceiveOneAction) action;
             emitMessageTrace(
-                    "Received",
+                    "RECEIVED",
                     actionIndex,
                     receiveAction.getReceivedMessages(),
                     receiveAction.getReceivedRecords());
@@ -253,33 +253,39 @@ public class ExecutionEventWorkflowExecutor extends WorkflowExecutor {
         int count = Math.max(messageCount, recordCount);
         for (int index = 0; index < count; index++) {
             ProtocolMessage message = index < messageCount ? messages.get(index) : null;
-            Record record = index < recordCount ? records.get(index) : null;
             byte[] bytes = messageBytes(message);
-            String source = "message";
             if (bytes == null || bytes.length == 0) {
-                bytes = recordBytes(record);
-                source = "record";
+                bytes = recordBytes(index < recordCount ? records.get(index) : null);
             }
-            if (bytes != null) {
-                PROTOCOL_TRACE_LOGGER.info(
-                        "{} Message Bytes: action={} index={} message={} source={} bytes={}",
-                        direction,
-                        actionIndex,
-                        index,
-                        messageName(message),
-                        source,
-                        toHex(bytes));
-            }
-            if (message != null) {
-                PROTOCOL_TRACE_LOGGER.info(
-                        "{} Message Value: action={} index={} message={} value={}",
-                        direction,
-                        actionIndex,
-                        index,
-                        messageName(message),
-                        messageValue(message));
-            }
+            PROTOCOL_TRACE_LOGGER.info(
+                    formatProtocolTrace(direction, actionIndex, index, message, bytes));
         }
+    }
+
+    static String formatProtocolTrace(
+            String direction, int actionIndex, int messageIndex, ProtocolMessage message) {
+        return formatProtocolTrace(
+                direction, actionIndex, messageIndex, message, messageBytes(message));
+    }
+
+    private static String formatProtocolTrace(
+            String direction,
+            int actionIndex,
+            int messageIndex,
+            ProtocolMessage message,
+            byte[] bytes) {
+        return "Protocol Message Value: direction="
+                + direction
+                + " actionIndex="
+                + actionIndex
+                + " messageIndex="
+                + messageIndex
+                + " message="
+                + messageName(message)
+                + " value="
+                + (message == null ? "null" : messageValue(message))
+                + " bytes="
+                + (bytes == null ? "null" : StructuredLogValueBuilder.toHex(bytes));
     }
 
     private static boolean isEmpty(List<?> values) {
@@ -290,29 +296,32 @@ public class ExecutionEventWorkflowExecutor extends WorkflowExecutor {
         if (message == null) {
             return null;
         }
-        return byteArrayValue(message.getCompleteResultingMessage());
+        return message.getCompleteResultingMessage() == null
+                ? null
+                : message.getCompleteResultingMessage().getValue();
     }
 
     private static byte[] recordBytes(Record record) {
         if (record == null) {
             return null;
         }
-        byte[] bytes = byteArrayValue(record.getCleanProtocolMessageBytes());
+        byte[] bytes =
+                record.getCleanProtocolMessageBytes() == null
+                        ? null
+                        : record.getCleanProtocolMessageBytes().getValue();
         if (bytes != null && bytes.length > 0) {
             return bytes;
         }
-        bytes = byteArrayValue(record.getProtocolMessageBytes());
+        bytes =
+                record.getProtocolMessageBytes() == null
+                        ? null
+                        : record.getProtocolMessageBytes().getValue();
         if (bytes != null && bytes.length > 0) {
             return bytes;
         }
-        return byteArrayValue(record.getCompleteRecordBytes());
-    }
-
-    private static byte[] byteArrayValue(ModifiableByteArray value) {
-        if (value == null) {
-            return null;
-        }
-        return value.getValue();
+        return record.getCompleteRecordBytes() == null
+                ? null
+                : record.getCompleteRecordBytes().getValue();
     }
 
     private static String messageName(ProtocolMessage message) {
@@ -328,20 +337,12 @@ public class ExecutionEventWorkflowExecutor extends WorkflowExecutor {
 
     private static String messageValue(ProtocolMessage message) {
         try {
-            return message.toShortString();
+            return message.toStructuredString();
         } catch (RuntimeException ex) {
-            return messageName(message);
+            return new StructuredLogValueBuilder()
+                    .add("contentType", message.getProtocolMessageType())
+                    .add("description", messageName(message))
+                    .toString();
         }
-    }
-
-    private static String toHex(byte[] bytes) {
-        StringBuilder builder = new StringBuilder(bytes.length * 3);
-        for (int index = 0; index < bytes.length; index++) {
-            if (index > 0) {
-                builder.append(' ');
-            }
-            builder.append(String.format("%02X", bytes[index] & 0xFF));
-        }
-        return builder.toString();
     }
 }

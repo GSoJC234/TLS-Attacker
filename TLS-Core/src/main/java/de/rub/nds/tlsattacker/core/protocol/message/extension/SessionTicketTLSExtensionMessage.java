@@ -9,9 +9,9 @@
 package de.rub.nds.tlsattacker.core.protocol.message.extension;
 
 import de.rub.nds.modifiablevariable.HoldsModifiableVariable;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.SessionTicketTLSExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.SessionTicketTLSExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.SessionTicketTLSExtensionPreparator;
@@ -41,6 +41,68 @@ public class SessionTicketTLSExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        if (sessionTicket == null) {
+            builder.add("ticket", null);
+            return;
+        }
+        builder.add(
+                "ticket",
+                new StructuredLogValueBuilder()
+                        .addHex(
+                                "keyName",
+                                sessionTicket.getKeyName() == null
+                                        ? null
+                                        : sessionTicket.getKeyName().getValue())
+                        .addHex(
+                                "iv",
+                                sessionTicket.getIV() == null
+                                        ? null
+                                        : sessionTicket.getIV().getValue())
+                        .add(
+                                "encryptedStateLength",
+                                sessionTicket.getEncryptedStateLength() == null
+                                        ? null
+                                        : sessionTicket.getEncryptedStateLength().getValue())
+                        .addHex(
+                                "encryptedState",
+                                sessionTicket.getEncryptedState() == null
+                                        ? null
+                                        : sessionTicket.getEncryptedState().getValue())
+                        .addHex(
+                                "mac",
+                                sessionTicket.getMAC() == null
+                                        ? null
+                                        : sessionTicket.getMAC().getValue())
+                        .add(
+                                "identityLength",
+                                sessionTicket.getIdentityLength() == null
+                                        ? null
+                                        : sessionTicket.getIdentityLength().getValue())
+                        .addHex(
+                                "identity",
+                                sessionTicket.getIdentity() == null
+                                        ? null
+                                        : sessionTicket.getIdentity().getValue())
+                        .addHex(
+                                "ticketAgeAdd",
+                                sessionTicket.getTicketAgeAdd() == null
+                                        ? null
+                                        : sessionTicket.getTicketAgeAdd().getValue())
+                        .add(
+                                "ticketNonceLength",
+                                sessionTicket.getTicketNonceLength() == null
+                                        ? null
+                                        : sessionTicket.getTicketNonceLength().getValue())
+                        .addHex(
+                                "ticketNonce",
+                                sessionTicket.getTicketNonce() == null
+                                        ? null
+                                        : sessionTicket.getTicketNonce().getValue()));
+    }
+
+    @Override
     public SessionTicketTLSExtensionParser getParser(TlsContext tlsContext, InputStream stream) {
         return new SessionTicketTLSExtensionParser(stream, tlsContext.getConfig(), tlsContext);
     }
@@ -62,6 +124,6 @@ public class SessionTicketTLSExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        return "";
+        return super.toCompactString();
     }
 }

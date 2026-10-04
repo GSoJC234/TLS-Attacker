@@ -12,15 +12,17 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.NamedGroup;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.EllipticCurvesExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.EllipticCurvesExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.EllipticCurvesExtensionPreparator;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.EllipticCurvesExtensionSerializer;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * This extension is defined in RFC-ietf-tls-rfc4492bis-17 Also known as "supported_groups"
@@ -65,6 +67,29 @@ public class EllipticCurvesExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "supportedGroupsLength",
+                supportedGroupsLength == null ? null : supportedGroupsLength.getValue());
+        byte[] values = supportedGroups == null ? null : supportedGroups.getValue();
+        if (values == null) {
+            builder.add("supportedGroups", null);
+            return;
+        }
+        try {
+            List<NamedGroup> groups = NamedGroup.namedGroupsFromByteArray(values);
+            if (groups.size() * 2 == values.length) {
+                builder.add("supportedGroups", groups);
+                return;
+            }
+        } catch (RuntimeException ignored) {
+            // Preserve malformed or unknown values as bytes.
+        }
+        builder.addHex("supportedGroups", values);
+    }
+
+    @Override
     public EllipticCurvesExtensionParser getParser(TlsContext tlsContext, InputStream stream) {
         return new EllipticCurvesExtensionParser(stream, tlsContext);
     }
@@ -86,20 +111,6 @@ public class EllipticCurvesExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  elliptic-curves:");
-        if (supportedGroups != null && supportedGroups.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(supportedGroups.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  elliptic-curves-len: ");
-        if (getExtensionLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-
-        return sb.toString();
+        return super.toCompactString();
     }
 }

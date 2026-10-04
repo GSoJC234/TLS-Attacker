@@ -12,11 +12,12 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.modifiablevariable.util.UnformattedByteArrayAdapter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.PskKeyExchangeMode;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.PSKKeyExchangeModesExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.ExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.PSKKeyExchangeModesExtensionParser;
@@ -94,6 +95,30 @@ public class PSKKeyExchangeModesExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "keyExchangeModesLength",
+                keyExchangeModesListLength == null
+                        ? null
+                        : keyExchangeModesListLength.getValue());
+        byte[] values =
+                keyExchangeModesListBytes == null
+                        ? null
+                        : keyExchangeModesListBytes.getValue();
+        if (values == null) {
+            builder.add("keyExchangeModes", null);
+            return;
+        }
+        java.util.List<PskKeyExchangeMode> modes = PskKeyExchangeMode.getExchangeModes(values);
+        if (modes.size() == values.length) {
+            builder.add("keyExchangeModes", modes);
+        } else {
+            builder.addHex("keyExchangeModes", values);
+        }
+    }
+
+    @Override
     public ExtensionParser getParser(TlsContext tlsContext, InputStream stream) {
         return new PSKKeyExchangeModesExtensionParser(stream, tlsContext);
     }
@@ -115,20 +140,6 @@ public class PSKKeyExchangeModesExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  psk-key-exchange-modes:");
-        if (keyExchangeModesListBytes != null && keyExchangeModesListBytes.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(keyExchangeModesListBytes.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  psk-key-exchange-modes-len: ");
-        if (getExtensionLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-
-        return sb.toString();
+        return super.toCompactString();
     }
 }

@@ -26,7 +26,7 @@ public class UnknownSSL2Message extends SSL2Message {
 
     @Override
     public String toShortString() {
-        return "UnknownSSL2";
+        return "SSL2_?";
     }
 
     @Override

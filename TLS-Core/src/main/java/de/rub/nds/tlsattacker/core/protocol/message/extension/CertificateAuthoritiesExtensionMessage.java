@@ -12,9 +12,9 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.CertificateAuthoritiesExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.ExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.CertificateAuthoritiesExtensionParser;
@@ -66,6 +66,17 @@ public class CertificateAuthoritiesExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "distinguishedNamesLength",
+                distinguishedNameLength == null ? null : distinguishedNameLength.getValue());
+        builder.addHex(
+                "distinguishedNames",
+                distinguishedNames == null ? null : distinguishedNames.getValue());
+    }
+
+    @Override
     public ExtensionHandler<? extends ExtensionMessage> getHandler(TlsContext tlsContext) {
         return new CertificateAuthoritiesExtensionHandler(tlsContext);
     }
@@ -87,19 +98,6 @@ public class CertificateAuthoritiesExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  certificate-authorities:\n: ");
-        if (distinguishedNames != null && distinguishedNames.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(distinguishedNames.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  certificate-authorities-len: ");
-        if (getExtensionLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        return sb.toString();
+        return super.toCompactString();
     }
 }

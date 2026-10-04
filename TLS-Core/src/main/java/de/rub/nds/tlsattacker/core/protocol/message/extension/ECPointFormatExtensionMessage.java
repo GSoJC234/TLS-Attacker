@@ -12,15 +12,18 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
+import de.rub.nds.tlsattacker.core.constants.ECPointFormat;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.ECPointFormatExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.ECPointFormatExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.ECPointFormatExtensionPreparator;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.ECPointFormatExtensionSerializer;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /** This extension is defined in RFC-ietf-tls-rfc-4492bis-17 */
 @XmlRootElement(name = "ECPointFormat")
@@ -62,6 +65,29 @@ public class ECPointFormatExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "pointFormatsLength",
+                pointFormatsLength == null ? null : pointFormatsLength.getValue());
+        byte[] values = pointFormats == null ? null : pointFormats.getValue();
+        if (values == null) {
+            builder.add("pointFormats", null);
+            return;
+        }
+        List<ECPointFormat> formats = new ArrayList<>();
+        for (byte value : values) {
+            ECPointFormat format = ECPointFormat.getECPointFormat(value);
+            if (format == null) {
+                builder.addHex("pointFormats", values);
+                return;
+            }
+            formats.add(format);
+        }
+        builder.add("pointFormats", formats);
+    }
+
+    @Override
     public ECPointFormatExtensionParser getParser(TlsContext tlsContext, InputStream stream) {
         return new ECPointFormatExtensionParser(stream, tlsContext);
     }
@@ -83,20 +109,6 @@ public class ECPointFormatExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  ecPointFormat: ");
-        if (this.pointFormats != null && pointFormats.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(pointFormats.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  ecPointFormat-len: ");
-        if (getExtensionLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-
-        return sb.toString();
+        return super.toCompactString();
     }
 }

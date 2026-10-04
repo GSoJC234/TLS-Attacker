@@ -14,13 +14,17 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.config.Config;
+import de.rub.nds.tlsattacker.core.constants.CipherSuite;
+import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.*;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.quic.QuicTransportParametersExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.sni.ServerNamePair;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -280,87 +284,116 @@ public abstract class CoreClientHelloMessage extends HelloMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        builder.add(
+                "cipherSuiteLength",
+                cipherSuiteLength == null ? null : cipherSuiteLength.getValue());
+        addCipherSuites(builder, cipherSuites == null ? null : cipherSuites.getValue());
+        builder.add(
+                "compressionMethodsLength",
+                compressionLength == null ? null : compressionLength.getValue());
+        addCompressionMethods(builder, compressions == null ? null : compressions.getValue());
+        builder.add("cookieLength", cookieLength == null ? null : cookieLength.getValue());
+        builder.addHex("cookie", cookie == null ? null : cookie.getValue());
+    }
+
+    private static void addCipherSuites(StructuredLogValueBuilder builder, byte[] values) {
+        if (values == null) {
+            builder.add("cipherSuites", null);
+            return;
+        }
+        try {
+            List<CipherSuite> suites = CipherSuite.getCipherSuites(values);
+            if (!suites.contains(null)) {
+                builder.add("cipherSuites", suites);
+                return;
+            }
+        } catch (RuntimeException ignored) {
+            // Preserve malformed or unknown values as bytes.
+        }
+        builder.addHex("cipherSuites", values);
+    }
+
+    private static void addCompressionMethods(
+            StructuredLogValueBuilder builder, byte[] values) {
+        if (values == null) {
+            builder.add("compressionMethods", null);
+            return;
+        }
+        List<CompressionMethod> methods = CompressionMethod.getCompressionMethods(values);
+        if (!methods.contains(null)) {
+            builder.add("compressionMethods", methods);
+        } else {
+            builder.addHex("compressionMethods", values);
+        }
+    }
+
+    @Override
     public String toCompactString() {
-        return this.toString();
+        return super.toCompactString();
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        }
-
-        sb.append("\n  protocol: ");
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName()).append(':');
+        sb.append("\n  Protocol Version: ");
         if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getProtocolVersion().getValue()));
+            ProtocolVersion version =
+                    ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue());
+            sb.append(
+                    version == null
+                            ? ArrayConverter.bytesToHexString(getProtocolVersion().getValue())
+                            : version);
         } else {
             sb.append("null");
         }
-        sb.append("\n  random: ");
+        sb.append("\n  Client Unix Time: ");
+        if (getUnixTime() != null && getUnixTime().getValue() != null) {
+            sb.append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
+        } else {
+            sb.append("null");
+        }
+        sb.append("\n  Client Random: ");
         if (getRandom() != null && getRandom().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getRandom().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  sessionID: ");
-        if (getSessionId() != null && getSessionId().getValue() != null && getSessionIdLength().getValue() > 0) {
+        sb.append("\n  Session ID: ");
+        if (getSessionId() != null && getSessionId().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getSessionId().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  sessionIDLen: ");
-        if (getSessionIdLength() != null && getSessionIdLength().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getSessionIdLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  cipherSuites: ");
+        sb.append("\n  Supported Cipher Suites: ");
         if (getCipherSuites() != null && getCipherSuites().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getCipherSuites().getValue()));
+            sb.append(formatCipherSuites(getCipherSuites().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  cipherSuitesLen: ");
-        if (getCipherSuiteLength() != null && getCipherSuiteLength().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getCipherSuiteLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  compression: ");
+        sb.append("\n  Supported Compression Methods: ");
         if (getCompressions() != null && getCompressions().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getCompressions().getValue()));
+            sb.append(formatCompressionMethods(getCompressions().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  compressionLen: ");
-        if (getCompressionLength() != null && getCompressionLength().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getCompressionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  extensionLen: ");
-        if (getExtensionsLength() != null && getExtensionsLength().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionsLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  extension: ");
-        if (getExtensions() != null) {
-            for (ExtensionMessage extension : getExtensions()) {
-                sb.append(extension.toCompactString());
-            }
-        } else {
-            sb.append("null");
-        }
+        sb.append("\n  Extensions: ").append(getExtensions());
         return sb.toString();
+    }
+
+    private static Object formatCipherSuites(byte[] values) {
+        try {
+            List<CipherSuite> suites = CipherSuite.getCipherSuites(values);
+            return suites.contains(null) ? ArrayConverter.bytesToHexString(values) : suites;
+        } catch (RuntimeException ignored) {
+            return ArrayConverter.bytesToHexString(values);
+        }
+    }
+
+    private static Object formatCompressionMethods(byte[] values) {
+        List<CompressionMethod> methods = CompressionMethod.getCompressionMethods(values);
+        return methods.contains(null) ? ArrayConverter.bytesToHexString(values) : methods;
     }
 
     @Override

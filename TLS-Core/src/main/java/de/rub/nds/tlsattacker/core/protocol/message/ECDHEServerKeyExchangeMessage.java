@@ -16,7 +16,9 @@ import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.EllipticCurveType;
 import de.rub.nds.tlsattacker.core.constants.NamedGroup;
+import de.rub.nds.tlsattacker.core.constants.SignatureAndHashAlgorithm;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.ECDHEServerKeyExchangeHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.computations.ECDHEServerComputations;
 import de.rub.nds.tlsattacker.core.protocol.parser.ECDHEServerKeyExchangeParser;
@@ -66,53 +68,78 @@ public class ECDHEServerKeyExchangeMessage extends ServerKeyExchangeMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        Byte curveTypeValue = curveType == null ? null : curveType.getValue();
+        EllipticCurveType resolvedCurveType =
+                curveTypeValue == null
+                        ? null
+                        : EllipticCurveType.getCurveType(curveTypeValue);
+        if (resolvedCurveType != null) {
+            builder.add("curveType", resolvedCurveType);
+        } else {
+            builder.addHex(
+                    "curveType", curveTypeValue == null ? null : new byte[] {curveTypeValue});
+        }
+        byte[] groupBytes = namedGroup == null ? null : namedGroup.getValue();
+        NamedGroup group = groupBytes == null ? null : NamedGroup.getNamedGroup(groupBytes);
+        if (group != null) {
+            builder.add("namedGroup", group);
+        } else {
+            builder.addHex("namedGroup", groupBytes);
+        }
+    }
+
+    @Override
     public String toCompactString() {
-        return this.toString();
+        String value = "ECDHE_SERVER_KEY_EXCHANGE";
+        return isRetransmission() ? value + " (ret.)" : value;
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  curveType: ");
+        StringBuilder sb = new StringBuilder("ECDHEServerKeyExchangeMessage:");
+        sb.append("\n  Curve Type: ");
         if (curveType != null && curveType.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{this.curveType.getValue()}));
+            EllipticCurveType resolvedCurveType =
+                    EllipticCurveType.getCurveType(curveType.getValue());
+            sb.append(
+                    resolvedCurveType == null
+                            ? ArrayConverter.bytesToHexString(new byte[] {curveType.getValue()})
+                            : resolvedCurveType);
         } else {
             sb.append("null");
         }
-        sb.append("\n  elliptic-curves: ");
+        sb.append("\n  Named Curve: ");
         if (namedGroup != null && namedGroup.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(this.namedGroup.getValue()));
+            NamedGroup resolvedGroup = NamedGroup.getNamedGroup(namedGroup.getValue());
+            sb.append(
+                    resolvedGroup == null
+                            ? ArrayConverter.bytesToHexString(namedGroup.getValue())
+                            : resolvedGroup);
         } else {
             sb.append("null");
         }
-        sb.append("\n  publicKey: ");
+        sb.append("\n  Public Key: ");
         if (getPublicKey() != null && getPublicKey().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getPublicKey().getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  signature-algorithms: ");
-        // signature and hash algorithms are provided only while working with
-        // (D)TLS 1.2
+        sb.append("\n  Signature and Hash Algorithm: ");
         if (this.getSignatureAndHashAlgorithm() != null
                 && getSignatureAndHashAlgorithm().getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getSignatureAndHashAlgorithm().getValue()));
+            byte[] algorithmBytes = getSignatureAndHashAlgorithm().getValue();
+            SignatureAndHashAlgorithm algorithm =
+                    SignatureAndHashAlgorithm.getSignatureAndHashAlgorithm(algorithmBytes);
+            sb.append(
+                    algorithm == null
+                            ? ArrayConverter.bytesToHexString(algorithmBytes)
+                            : algorithm);
         } else {
             sb.append("null");
         }
-        sb.append("\n  signature: ");
+        sb.append("\n  Signature: ");
         if (getSignature() != null && getSignature().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getSignature().getValue()));
         } else {
@@ -150,7 +177,7 @@ public class ECDHEServerKeyExchangeMessage extends ServerKeyExchangeMessage {
 
     @Override
     public String toShortString() {
-        return "ECDH_SKE";
+        return "ECDHE_SKE";
     }
 
     @Override

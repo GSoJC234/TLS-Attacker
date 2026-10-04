@@ -15,11 +15,11 @@ import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bool.ModifiableBoolean;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.constants.NamedGroup;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.KeyShareExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.keyshare.KeyShareEntry;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.KeyShareExtensionParser;
@@ -113,6 +113,45 @@ public class KeyShareExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "keyShareListLength",
+                keyShareListLength == null ? null : keyShareListLength.getValue());
+        builder.add("retryRequestMode", isRetryRequestMode());
+        if (keyShareList == null) {
+            builder.add("keyShares", null);
+            return;
+        }
+        List<StructuredLogValueBuilder> entries = new LinkedList<>();
+        for (KeyShareEntry entry : keyShareList) {
+            if (entry == null) {
+                entries.add(null);
+                continue;
+            }
+            StructuredLogValueBuilder entryValue = new StructuredLogValueBuilder();
+            byte[] groupBytes = entry.getGroup() == null ? null : entry.getGroup().getValue();
+            NamedGroup group =
+                    groupBytes == null ? entry.getGroupConfig() : NamedGroup.getNamedGroup(groupBytes);
+            if (group != null) {
+                entryValue.add("group", group);
+            } else {
+                entryValue.addHex("group", groupBytes);
+            }
+            entryValue.add(
+                    "publicKeyLength",
+                    entry.getPublicKeyLength() == null
+                            ? null
+                            : entry.getPublicKeyLength().getValue());
+            entryValue.addHex(
+                    "publicKey",
+                    entry.getPublicKey() == null ? null : entry.getPublicKey().getValue());
+            entries.add(entryValue);
+        }
+        builder.add("keyShares", entries);
+    }
+
+    @Override
     public List<ModifiableVariableHolder> getAllModifiableVariableHolders() {
         List<ModifiableVariableHolder> allModifiableVariableHolders =
                 super.getAllModifiableVariableHolders();
@@ -144,20 +183,6 @@ public class KeyShareExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  key-shares:");
-        if (this.keyShareListBytes != null && keyShareListBytes.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(keyShareListBytes.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  key-shares-len: ");
-        if (getExtensionLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-
-        return sb.toString();
+        return super.toCompactString();
     }
 }

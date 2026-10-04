@@ -18,6 +18,7 @@ import de.rub.nds.tlsattacker.core.constants.ClientCertificateType;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.SignatureAndHashAlgorithm;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.CertificateRequestHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.ExtensionMessage;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.SignatureAlgorithmsCertExtensionMessage;
@@ -27,6 +28,7 @@ import de.rub.nds.tlsattacker.core.protocol.preparator.CertificateRequestPrepara
 import de.rub.nds.tlsattacker.core.protocol.serializer.CertificateRequestSerializer;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -194,59 +196,114 @@ public class CertificateRequestMessage extends HandshakeMessage {
                         this.certificateRequestContext, certificateRequestContext);
     }
 
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        builder.add(
+                "clientCertificateTypesCount",
+                clientCertificateTypesCount == null
+                        ? null
+                        : clientCertificateTypesCount.getValue());
+        addClientCertificateTypes(
+                builder, clientCertificateTypes == null ? null : clientCertificateTypes.getValue());
+        builder.add(
+                "signatureAlgorithmsLength",
+                signatureHashAlgorithmsLength == null
+                        ? null
+                        : signatureHashAlgorithmsLength.getValue());
+        addSignatureAlgorithms(
+                builder,
+                signatureHashAlgorithms == null ? null : signatureHashAlgorithms.getValue());
+        builder.add(
+                "distinguishedNamesLength",
+                distinguishedNamesLength == null ? null : distinguishedNamesLength.getValue());
+        builder.addHex(
+                "distinguishedNames",
+                distinguishedNames == null ? null : distinguishedNames.getValue());
+        builder.add(
+                "certificateRequestContextLength",
+                certificateRequestContextLength == null
+                        ? null
+                        : certificateRequestContextLength.getValue());
+        builder.addHex(
+                "certificateRequestContext",
+                certificateRequestContext == null ? null : certificateRequestContext.getValue());
+    }
+
+    private static void addClientCertificateTypes(
+            StructuredLogValueBuilder builder, byte[] values) {
+        if (values == null) {
+            builder.add("clientCertificateTypes", null);
+            return;
+        }
+        List<ClientCertificateType> types = new ArrayList<>();
+        for (byte value : values) {
+            ClientCertificateType type = ClientCertificateType.getClientCertificateType(value);
+            if (type == null) {
+                builder.addHex("clientCertificateTypes", values);
+                return;
+            }
+            types.add(type);
+        }
+        builder.add("clientCertificateTypes", types);
+    }
+
+    private static void addSignatureAlgorithms(
+            StructuredLogValueBuilder builder, byte[] values) {
+        if (values == null) {
+            builder.add("signatureAlgorithms", null);
+            return;
+        }
+        try {
+            List<SignatureAndHashAlgorithm> algorithms =
+                    SignatureAndHashAlgorithm.getSignatureAndHashAlgorithms(values);
+            if (algorithms.size() * 2 == values.length) {
+                builder.add("signatureAlgorithms", algorithms);
+                return;
+            }
+        } catch (RuntimeException ignored) {
+            // Preserve malformed or unknown values as bytes.
+        }
+        builder.addHex("signatureAlgorithms", values);
+    }
+
 
     @Override
     public String toCompactString() {
-        return this.toString();
+        return super.toCompactString();
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        }
-        sb.append("\n  certificateTypesLen: ");
+        StringBuilder sb = new StringBuilder("CertificateRequestMessage:");
+        sb.append("\n  Certificate Types Count: ");
         if (clientCertificateTypesCount != null && clientCertificateTypesCount.getValue() != null) {
             sb.append(clientCertificateTypesCount.getValue());
         } else {
             sb.append("null");
         }
-        sb.append("\n  certificateTypes: ");
+        sb.append("\n  Certificate Types: ");
         if (clientCertificateTypes != null && clientCertificateTypes.getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(clientCertificateTypes.getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  signature-algorithms-len: ");
+        sb.append("\n  Signature Hash Algorithms Length: ");
         if (signatureHashAlgorithmsLength != null
                 && signatureHashAlgorithmsLength.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(signatureHashAlgorithmsLength.getByteArray(2)));
+            sb.append(signatureHashAlgorithmsLength.getValue());
         } else {
             sb.append("null");
         }
-        sb.append("\n  signature-algorithms: ");
+        sb.append("\n  Signature Hash Algorithms: ");
         if (signatureHashAlgorithms != null && signatureHashAlgorithms.getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(signatureHashAlgorithms.getValue()));
         } else {
             sb.append("null");
         }
-        sb.append("\n  distinguishedNamesLen: ");
+        sb.append("\n  Distinguished Names Length: ");
         if (distinguishedNamesLength != null && distinguishedNamesLength.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(distinguishedNamesLength.getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  distinguishedNames: ");
-        if (distinguishedNames != null && distinguishedNames.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(distinguishedNames.getValue()));
+            sb.append(distinguishedNamesLength.getValue());
         } else {
             sb.append("null");
         }

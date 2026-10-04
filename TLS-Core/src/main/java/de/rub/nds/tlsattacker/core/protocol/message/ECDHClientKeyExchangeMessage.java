@@ -32,12 +32,13 @@ public class ECDHClientKeyExchangeMessage extends ClientKeyExchangeMessage {
 
     @Override
     public String toCompactString() {
-        return this.toString();
+        String value = "ECDH_CLIENT_KEY_EXCHANGE";
+        return isRetransmission() ? value + " (ret.)" : value;
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName()).append(':');
         sb.append("\n  handshakeType: ");
         if (getHandshakeMessageType() != null) {
             sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));

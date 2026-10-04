@@ -14,6 +14,7 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.util.UnformattedByteArrayAdapter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.UnknownExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.UnknownExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.UnknownExtensionPreparator;
@@ -75,8 +76,25 @@ public class UnknownExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.addHex("configuredType", typeConfig);
+        builder.add("configuredLength", lengthConfig);
+        builder.addHex(
+                "data", extensionData == null ? dataConfig : extensionData.getValue());
+    }
+
+    @Override
     public String toString() {
-        return "UnknownExtensionMessage";
+        StringBuilder builder = new StringBuilder(super.toString());
+        builder.append("\n    Configured type: ")
+                .append(typeConfig == null ? "null" : StructuredLogValueBuilder.toHex(typeConfig));
+        builder.append("\n    Configured length: ").append(lengthConfig);
+        builder.append("\n    Data: ")
+                .append(
+                        StructuredLogValueBuilder.toHex(
+                                extensionData == null ? dataConfig : extensionData.getValue()));
+        return builder.toString();
     }
 
     @Override

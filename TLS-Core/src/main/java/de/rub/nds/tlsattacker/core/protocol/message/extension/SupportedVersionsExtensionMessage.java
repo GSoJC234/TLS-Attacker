@@ -12,15 +12,17 @@ import de.rub.nds.modifiablevariable.ModifiableVariableFactory;
 import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.SupportedVersionsExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.SupportedVersionsExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.SupportedVersionsExtensionPreparator;
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.SupportedVersionsExtensionSerializer;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.InputStream;
+import java.util.List;
 
 @XmlRootElement(name = "SupportedVersions")
 public class SupportedVersionsExtensionMessage extends ExtensionMessage {
@@ -62,6 +64,29 @@ public class SupportedVersionsExtensionMessage extends ExtensionMessage {
     }
 
     @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "supportedVersionsLength",
+                supportedVersionsLength == null ? null : supportedVersionsLength.getValue());
+        byte[] values = supportedVersions == null ? null : supportedVersions.getValue();
+        if (values == null) {
+            builder.add("supportedVersions", null);
+            return;
+        }
+        try {
+            List<ProtocolVersion> versions = ProtocolVersion.getProtocolVersions(values);
+            if (versions.size() * 2 == values.length) {
+                builder.add("supportedVersions", versions);
+                return;
+            }
+        } catch (RuntimeException ignored) {
+            // Preserve malformed or unknown values as bytes.
+        }
+        builder.addHex("supportedVersions", values);
+    }
+
+    @Override
     public SupportedVersionsExtensionParser getParser(TlsContext tlsContext, InputStream stream) {
         return new SupportedVersionsExtensionParser(stream, tlsContext);
     }
@@ -83,19 +108,6 @@ public class SupportedVersionsExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n  supported-versions: ");
-        if (supportedVersions != null && supportedVersions.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(supportedVersions.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  supported-versions-len: ");
-        if (getExtensionLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionLength().getByteArray(2)));
-        } else {
-            sb.append("null");
-        }
-        return sb.toString();
+        return super.toCompactString();
     }
 }

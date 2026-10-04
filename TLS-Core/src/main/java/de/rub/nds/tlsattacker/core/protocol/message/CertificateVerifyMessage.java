@@ -18,7 +18,9 @@ import de.rub.nds.protocol.constants.SignatureAlgorithm;
 import de.rub.nds.protocol.crypto.signature.SignatureCalculator;
 import de.rub.nds.protocol.crypto.signature.SignatureComputations;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
+import de.rub.nds.tlsattacker.core.constants.SignatureAndHashAlgorithm;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.CertificateVerifyHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.CertificateVerifyParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.CertificateVerifyPreparator;
@@ -95,38 +97,51 @@ public class CertificateVerifyMessage extends HandshakeMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        byte[] algorithmBytes =
+                signatureHashAlgorithm == null ? null : signatureHashAlgorithm.getValue();
+        SignatureAndHashAlgorithm algorithm =
+                algorithmBytes == null
+                        ? null
+                        : SignatureAndHashAlgorithm.getSignatureAndHashAlgorithm(algorithmBytes);
+        if (algorithm != null) {
+            builder.add("signatureAlgorithm", algorithm);
+        } else {
+            builder.addHex("signatureAlgorithm", algorithmBytes);
+        }
+        builder.add(
+                "signatureLength", signatureLength == null ? null : signatureLength.getValue());
+        builder.addHex("signature", signature == null ? null : signature.getValue());
+    }
+
+    @Override
     public String toCompactString() {
-        return this.toString();
+        return super.toCompactString();
     }
 
     @Override
     public String toString() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            builder.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            builder.append("null");
-        }
-        builder.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            builder.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        } else {
-            builder.append("null");
-        }
-        builder.append("\n  certificate-verify-algorithm: ");
+        StringBuilder builder = new StringBuilder("CertificateVerifyMessage:");
+        builder.append("\n  SignatureAndHashAlgorithm: ");
         if (signatureHashAlgorithm != null && signatureHashAlgorithm.getValue() != null) {
-            builder.append(ArrayConverter.bytesToHexString(signatureHashAlgorithm.getValue()));
+            SignatureAndHashAlgorithm algorithm =
+                    SignatureAndHashAlgorithm.getSignatureAndHashAlgorithm(
+                            signatureHashAlgorithm.getValue());
+            builder.append(
+                    algorithm == null
+                            ? ArrayConverter.bytesToHexString(signatureHashAlgorithm.getValue())
+                            : algorithm);
         } else {
             builder.append("null");
         }
-        builder.append("\n  signature-len: ");
+        builder.append("\n  Signature Length: ");
         if (signatureLength != null && signatureLength.getValue() != null) {
-            builder.append(ArrayConverter.bytesToHexString(signatureLength.getByteArray(3)));
+            builder.append(signatureLength.getValue());
         } else {
             builder.append("null");
         }
-        builder.append("\n  signature: ");
+        builder.append("\n  Signature: ");
         if (signature != null && signature.getValue() != null) {
             builder.append(ArrayConverter.bytesToHexString(signature.getValue()));
         } else {

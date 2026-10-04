@@ -14,6 +14,7 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.CertificateStatusHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.CertificateStatusParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.CertificateStatusPreparator;
@@ -55,6 +56,19 @@ public class CertificateStatusMessage extends HandshakeMessage {
     @Override
     public CertificateStatusSerializer getSerializer(TlsContext tlsContext) {
         return new CertificateStatusSerializer(this);
+    }
+
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        builder.add(
+                "certificateStatusType",
+                certificateStatusType == null ? null : certificateStatusType.getValue());
+        builder.add(
+                "ocspResponseLength",
+                ocspResponseLength == null ? null : ocspResponseLength.getValue());
+        builder.addHex(
+                "ocspResponse", ocspResponseBytes == null ? null : ocspResponseBytes.getValue());
     }
 
     @Override

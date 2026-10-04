@@ -8,7 +8,6 @@
  */
 package de.rub.nds.tlsattacker.core.protocol.message.extension;
 
-import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.EncryptThenMacExtensionHandler;
@@ -48,6 +47,6 @@ public class EncryptThenMacExtensionMessage extends ExtensionMessage {
 
     @Override
     public String toCompactString() {
-        return "";
+        return super.toCompactString();
     }
 }

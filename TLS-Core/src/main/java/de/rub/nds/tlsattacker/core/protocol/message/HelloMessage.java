@@ -13,6 +13,8 @@ import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
+import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 
 public abstract class HelloMessage extends HandshakeMessage {
 
@@ -93,5 +95,22 @@ public abstract class HelloMessage extends HandshakeMessage {
 
     public void setSessionId(byte[] sessionId) {
         this.sessionId = ModifiableVariableFactory.safelySetValue(this.sessionId, sessionId);
+    }
+
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        byte[] versionBytes = protocolVersion == null ? null : protocolVersion.getValue();
+        ProtocolVersion version =
+                versionBytes == null ? null : ProtocolVersion.getProtocolVersion(versionBytes);
+        if (version != null) {
+            builder.add("protocolVersion", version);
+        } else {
+            builder.addHex("protocolVersion", versionBytes);
+        }
+        builder.addHex("unixTime", unixTime == null ? null : unixTime.getValue());
+        builder.addHex("random", random == null ? null : random.getValue());
+        builder.add("sessionIdLength", sessionIdLength == null ? null : sessionIdLength.getValue());
+        builder.addHex("sessionId", sessionId == null ? null : sessionId.getValue());
     }
 }

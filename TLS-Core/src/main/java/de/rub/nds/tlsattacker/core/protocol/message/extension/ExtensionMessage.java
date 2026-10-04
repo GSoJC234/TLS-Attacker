@@ -17,6 +17,7 @@ import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.layer.data.DataContainer;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.ExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.DtlsHandshakeMessageFragment;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.quic.QuicTransportParametersExtensionMessage;
@@ -139,22 +140,73 @@ public abstract class ExtensionMessage extends ModifiableVariableHolder
         return extensionTypeConstant;
     }
 
+    /** Returns this extension as a deterministic structured value for protocol trace logs. */
+    public final StructuredLogValueBuilder toStructuredValue() {
+        StructuredLogValueBuilder builder = new StructuredLogValueBuilder();
+        byte[] encodedType = extensionType == null ? null : extensionType.getValue();
+        ExtensionType resolvedType =
+                encodedType == null
+                        ? extensionTypeConstant
+                        : ExtensionType.getExtensionType(encodedType);
+        if (resolvedType != null && resolvedType != ExtensionType.UNKNOWN) {
+            builder.add("extensionType", resolvedType);
+        } else {
+            builder.addHex("extensionType", encodedType);
+        }
+        builder.add(
+                "extensionLength",
+                extensionLength == null ? null : extensionLength.getValue());
+        if (extensionContent != null) {
+            builder.addHex("extensionContent", extensionContent.getValue());
+        }
+        addStructuredLogFields(builder);
+        return builder;
+    }
+
+    public final String toStructuredString() {
+        return toStructuredValue().toString();
+    }
+
+    /** Adds fields owned by a concrete extension class to its protocol trace value. */
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {}
+
+    @Override
+    public String toCompactString() {
+        byte[] encodedType = extensionType == null ? null : extensionType.getValue();
+        ExtensionType resolvedType =
+                encodedType == null
+                        ? extensionTypeConstant
+                        : ExtensionType.getExtensionType(encodedType);
+        if (resolvedType != null && resolvedType != ExtensionType.UNKNOWN) {
+            return resolvedType.name();
+        }
+        return encodedType == null
+                ? "UNKNOWN_EXTENSION"
+                : "UNKNOWN_EXTENSION (" + ArrayConverter.bytesToHexString(encodedType) + ")";
+    }
+
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        if (extensionType == null || extensionType.getValue() == null) {
-            sb.append("\n    Extension type: null");
-        } else {
-            sb.append("\n    Extension type: ")
-                    .append(ArrayConverter.bytesToHexString(extensionType.getValue()));
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append(':');
+        byte[] encodedType = extensionType == null ? null : extensionType.getValue();
+        ExtensionType resolvedType = extensionTypeConstant;
+        if (resolvedType == null && encodedType != null) {
+            resolvedType = ExtensionType.getExtensionType(encodedType);
         }
-        if (extensionLength == null || extensionLength.getValue() == null) {
-            sb.append("\n    Extension length: null");
-
-        } else {
-            sb.append("\n    Extension length: ").append(extensionLength.getValue());
-        }
-        return sb.toString();
+        builder.append("\n    Extension Type: ").append(resolvedType);
+        builder.append("\n    Encoded Type: ")
+                .append(
+                        encodedType == null
+                                ? "null"
+                                : ArrayConverter.bytesToHexString(encodedType));
+        builder.append("\n    Extension Length: ")
+                .append(extensionLength == null ? null : extensionLength.getValue());
+        builder.append("\n    Extension Content: ")
+                .append(
+                        extensionContent == null || extensionContent.getValue() == null
+                                ? "null"
+                                : ArrayConverter.bytesToHexString(extensionContent.getValue()));
+        return builder.toString();
     }
 
     public ModifiableByteArray getExtensionContent() {

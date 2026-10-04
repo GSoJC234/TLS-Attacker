@@ -48,12 +48,12 @@ public class ServerHelloDoneMessage extends HandshakeMessage {
 
     @Override
     public String toCompactString() {
-        return this.toString();
+        return super.toCompactString();
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(getClass().getSimpleName()).append(':');
         sb.append("\n  handshakeType: ");
         if (getHandshakeMessageType() != null) {
             sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));

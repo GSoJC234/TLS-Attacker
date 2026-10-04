@@ -167,6 +167,6 @@ public class EncryptedClientHelloExtensionMessage extends ExtensionMessage {
     }
     @Override
     public String toCompactString() {
-        return "";
+        return super.toCompactString();
     }
 }

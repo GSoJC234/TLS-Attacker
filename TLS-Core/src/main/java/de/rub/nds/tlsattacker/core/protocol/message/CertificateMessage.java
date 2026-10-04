@@ -16,6 +16,7 @@ import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.CertificateMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.cert.CertificateEntry;
 import de.rub.nds.tlsattacker.core.protocol.parser.CertificateMessageParser;
@@ -111,31 +112,89 @@ public class CertificateMessage extends HandshakeMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        builder.add(
+                "requestContextLength",
+                requestContextLength == null ? null : requestContextLength.getValue());
+        builder.addHex(
+                "requestContext", requestContext == null ? null : requestContext.getValue());
+        builder.add(
+                "certificatesLength",
+                certificatesListLength == null ? null : certificatesListLength.getValue());
+        if (certificateEntryList == null) {
+            builder.addHex(
+                    "certificates",
+                    certificatesListBytes == null ? null : certificatesListBytes.getValue());
+        } else {
+            List<StructuredLogValueBuilder> entries = new LinkedList<>();
+            for (CertificateEntry entry : certificateEntryList) {
+                if (entry == null) {
+                    entries.add(null);
+                    continue;
+                }
+                StructuredLogValueBuilder entryValue = new StructuredLogValueBuilder();
+                entryValue.add(
+                        "certificateLength",
+                        entry.getCertificateLength() == null
+                                ? null
+                                : entry.getCertificateLength().getValue());
+                entryValue.addHex(
+                        "certificate",
+                        entry.getCertificateBytes() == null
+                                ? null
+                                : entry.getCertificateBytes().getValue());
+                entryValue.add(
+                        "extensionsLength",
+                        entry.getExtensionsLength() == null
+                                ? null
+                                : entry.getExtensionsLength().getValue());
+                if (entry.getExtensionList() == null) {
+                    entryValue.addHex(
+                            "extensions",
+                            entry.getExtensionBytes() == null
+                                    ? null
+                                    : entry.getExtensionBytes().getValue());
+                } else {
+                    List<StructuredLogValueBuilder> extensions = new LinkedList<>();
+                    entry.getExtensionList()
+                            .forEach(
+                                    extension ->
+                                            extensions.add(
+                                                    extension == null
+                                                            ? null
+                                                            : extension.toStructuredValue()));
+                    entryValue.add("extensions", extensions);
+                }
+                entries.add(entryValue);
+            }
+            builder.add("certificates", entries);
+        }
+    }
+
+    @Override
     public String toCompactString() {
-        return this.toString();
+        StringBuilder builder = new StringBuilder("CERTIFICATE");
+        if (isRetransmission()) {
+            builder.append(" (ret.)");
+        }
+        return builder.toString();
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
+        sb.append("CertificateMessage:");
+        sb.append("\n  Certificates Length: ");
+        if (certificatesListLength != null && certificatesListLength.getValue() != null) {
+            sb.append(certificatesListLength.getValue());
         } else {
             sb.append("null");
         }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        }
-        sb.append("\n  certificateEntryLen: ");
-        if (certificatesListLength.getValue() != null && certificatesListLength.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(certificatesListLength.getByteArray(3)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  certificateEntry:\n");
-        if (certificatesListBytes != null && certificatesListBytes.getValue() != null && certificatesListLength.getValue() > 0) {
+        sb.append("\n  Certificate:\n");
+        if (certificatesListBytes != null
+                && certificatesListBytes.getValue() != null
+                && certificatesListBytes.getValue().length > 0) {
             sb.append(ArrayConverter.bytesToHexString(certificatesListBytes.getValue()));
         } else {
             sb.append("null");

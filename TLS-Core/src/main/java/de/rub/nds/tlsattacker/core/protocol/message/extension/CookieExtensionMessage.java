@@ -14,6 +14,7 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.CookieExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.CookieExtensionParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.extension.CookieExtensionPreparator;
@@ -57,6 +58,13 @@ public class CookieExtensionMessage extends ExtensionMessage {
 
     public void setCookie(byte[] cookieBytes) {
         this.cookie = ModifiableVariableFactory.safelySetValue(cookie, cookieBytes);
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add("cookieLength", cookieLength == null ? null : cookieLength.getValue());
+        builder.addHex("cookie", cookie == null ? null : cookie.getValue());
     }
 
     @Override

@@ -19,6 +19,7 @@ import de.rub.nds.tlsattacker.core.constants.CompressionMethod;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.ServerHelloHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.*;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.sni.ServerNamePair;
@@ -258,43 +259,64 @@ public class ServerHelloMessage extends HelloMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        byte[] cipherSuiteBytes =
+                selectedCipherSuite == null ? null : selectedCipherSuite.getValue();
+        CipherSuite cipherSuite =
+                cipherSuiteBytes == null ? null : CipherSuite.getCipherSuite(cipherSuiteBytes);
+        if (cipherSuite != null) {
+            builder.add("selectedCipherSuite", cipherSuite);
+        } else {
+            builder.addHex("selectedCipherSuite", cipherSuiteBytes);
+        }
+        Byte compressionByte =
+                selectedCompressionMethod == null ? null : selectedCompressionMethod.getValue();
+        CompressionMethod compressionMethod =
+                compressionByte == null
+                        ? null
+                        : CompressionMethod.getCompressionMethod(compressionByte);
+        if (compressionMethod != null) {
+            builder.add("selectedCompressionMethod", compressionMethod);
+        } else {
+            builder.addHex(
+                    "selectedCompressionMethod",
+                    compressionByte == null ? null : new byte[] {compressionByte});
+        }
+        builder.add("helloRetryRequest", isTls13HelloRetryRequest());
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(super.toString());
         sb.append("\n  Protocol Version: ");
-        if (getProtocolVersion() != null) {
-            sb.append(ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()));
+        ProtocolVersion protocolVersion = null;
+        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
+            protocolVersion = ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue());
+            sb.append(
+                    protocolVersion == null
+                            ? ArrayConverter.bytesToHexString(getProtocolVersion().getValue())
+                            : protocolVersion);
         } else {
             sb.append("null");
         }
-        if (getProtocolVersion() != null
-                && getProtocolVersion().getValue() != null
-                && !ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-            sb.append("\n  Server Unix Time: ")
-                    .append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
-        }
         sb.append("\n  Server Unix Time: ");
-        if (getProtocolVersion() != null) {
-            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-                sb.append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
-            } else {
-                sb.append("null");
-            }
+        if (getUnixTime() != null
+                && getUnixTime().getValue() != null
+                && (protocolVersion == null || !protocolVersion.isTLS13())) {
+            sb.append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
         } else {
             sb.append("null");
         }
         sb.append("\n  Server Random: ");
-        if (getRandom() != null) {
+        if (getRandom() != null && getRandom().getValue() != null) {
             sb.append(ArrayConverter.bytesToHexString(getRandom().getValue()));
         } else {
             sb.append("null");
         }
         sb.append("\n  Session ID: ");
-        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-                sb.append(ArrayConverter.bytesToHexString(getSessionId().getValue()));
-            } else {
-                sb.append("null");
-            }
+        if (getSessionId() != null && getSessionId().getValue() != null) {
+            sb.append(ArrayConverter.bytesToHexString(getSessionId().getValue()));
         } else {
             sb.append("null");
         }
@@ -305,25 +327,17 @@ public class ServerHelloMessage extends HelloMessage {
             sb.append("null");
         }
         sb.append("\n  Selected Compression Method: ");
-        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-                sb.append(
-                        CompressionMethod.getCompressionMethod(
-                                selectedCompressionMethod.getValue()));
-            } else {
-                sb.append("null");
-            }
+        if (selectedCompressionMethod != null && selectedCompressionMethod.getValue() != null) {
+            CompressionMethod compressionMethod =
+                    CompressionMethod.getCompressionMethod(selectedCompressionMethod.getValue());
+            sb.append(
+                    compressionMethod == null
+                            ? selectedCompressionMethod.getValue()
+                            : compressionMethod);
         } else {
             sb.append("null");
         }
-        sb.append("\n  Extensions: ");
-        if (getExtensions() == null) {
-            sb.append("null");
-        } else {
-            for (ExtensionMessage e : getExtensions()) {
-                sb.append(e.toString());
-            }
-        }
+        sb.append("\n  Extensions: ").append(getExtensions());
         return sb.toString();
     }
 
@@ -364,103 +378,16 @@ public class ServerHelloMessage extends HelloMessage {
 
     @Override
     public String toCompactString() {
-        StringBuilder sb = new StringBuilder(super.toString());
-        sb.append("\n  handshakeType: ");
-        if (getHandshakeMessageType() != null) {
-            sb.append(ArrayConverter.bytesToHexString(new byte[]{getHandshakeMessageType().getValue()}));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  handshakeLen: ");
-        if (getLength() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getLength().getByteArray(3)));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  protocol: ");
-        if (getProtocolVersion() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getProtocolVersion().getValue()));
-        } else {
-            sb.append("null");
-        }
-//        if (getProtocolVersion() != null
-//                && getProtocolVersion().getValue() != null
-//                && !ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-//            sb.append("\n  Server Unix Time: ")
-//                    .append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
-//        }
-//        sb.append("\n  Server Unix Time: ");
-//        if (getProtocolVersion() != null) {
-//            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-//                sb.append(new Date(ArrayConverter.bytesToLong(getUnixTime().getValue()) * 1000));
-//            } else {
-//                sb.append("null");
-//            }
-//        } else {
-//            sb.append("null");
-//        }
-        sb.append("\n  random: ");
-        if (getRandom() != null) {
-            sb.append(ArrayConverter.bytesToHexString(getRandom().getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  sessionID: ");
-        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13() && getSessionIdLength().getValue() > 0) {
-                sb.append(ArrayConverter.bytesToHexString(getSessionId().getValue()));
-            } else {
-                sb.append("null");
-            }
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  sessionIDLen: ");
-        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-                sb.append(ArrayConverter.bytesToHexString(getSessionIdLength().getByteArray(2)));
-            } else {
-                sb.append("null");
-            }
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  cipherSuites: ");
-        if (selectedCipherSuite != null && selectedCipherSuite.getValue() != null) {
-            sb.append(ArrayConverter.bytesToHexString(selectedCipherSuite.getValue()));
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  compression: ");
-        if (getProtocolVersion() != null && getProtocolVersion().getValue() != null) {
-            if (!ProtocolVersion.getProtocolVersion(getProtocolVersion().getValue()).isTLS13()) {
-                sb.append(ArrayConverter.bytesToHexString(new byte[]{selectedCompressionMethod.getValue()}));
-            } else {
-                sb.append("null");
-            }
-        } else {
-            sb.append("null");
-        }
-        sb.append("\n  extensionLen: ");
-        if (getExtensions() == null) {
-            sb.append("null");
-        } else {
-            sb.append(ArrayConverter.bytesToHexString(getExtensionsLength().getByteArray(2)));
-        }
-        sb.append("\n  extension: ");
-        if (getExtensions() == null) {
-            sb.append("null");
-        } else {
-            for (ExtensionMessage e : getExtensions()) {
-                sb.append(e.toCompactString());
-            }
-        }
-        return sb.toString();
+        String value =
+                Boolean.TRUE.equals(isTls13HelloRetryRequest())
+                        ? "HELLO_RETRY_REQUEST"
+                        : "SERVER_HELLO";
+        return isRetransmission() ? value + " (ret.)" : value;
     }
 
     @Override
     public String toShortString() {
-        if (isTls13HelloRetryRequest()) {
+        if (Boolean.TRUE.equals(isTls13HelloRetryRequest())) {
             return "HRR";
         }
         return "SH";

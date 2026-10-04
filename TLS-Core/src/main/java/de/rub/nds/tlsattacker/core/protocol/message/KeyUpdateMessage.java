@@ -13,6 +13,7 @@ import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.constants.KeyUpdateRequest;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.KeyUpdateHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.KeyUpdateParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.KeyUpdatePreparator;
@@ -62,6 +63,26 @@ public class KeyUpdateMessage extends HandshakeMessage {
 
     public ModifiableByte getRequestMode() {
         return this.requestMode;
+    }
+
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        Byte value = requestMode == null ? null : requestMode.getValue();
+        KeyUpdateRequest resolved = null;
+        if (value != null) {
+            for (KeyUpdateRequest candidate : KeyUpdateRequest.values()) {
+                if (candidate.getValue() == value) {
+                    resolved = candidate;
+                    break;
+                }
+            }
+        }
+        if (resolved != null) {
+            builder.add("requestMode", resolved);
+        } else {
+            builder.addHex("requestMode", value == null ? null : new byte[] {value});
+        }
     }
 
     @Override

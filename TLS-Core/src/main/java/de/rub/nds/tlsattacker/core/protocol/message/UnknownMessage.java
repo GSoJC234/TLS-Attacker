@@ -12,6 +12,7 @@ import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.ProtocolMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
 import de.rub.nds.tlsattacker.core.protocol.ProtocolMessage;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.UnknownMessageHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.UnknownMessageParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.UnknownMessagePreparator;
@@ -54,6 +55,17 @@ public class UnknownMessage extends ProtocolMessage {
 
     public void setRecordContentMessageType(ProtocolMessageType recordContentMessageType) {
         this.recordContentMessageType = recordContentMessageType;
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add("recordContentType", recordContentMessageType);
+        builder.addHex(
+                "data",
+                getCompleteResultingMessage() == null
+                        ? dataConfig
+                        : getCompleteResultingMessage().getValue());
     }
 
     @Override

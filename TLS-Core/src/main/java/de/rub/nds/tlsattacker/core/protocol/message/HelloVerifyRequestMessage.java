@@ -14,7 +14,9 @@ import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
+import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.HelloVerifyRequestHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.HelloVerifyRequestParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.HelloVerifyRequestPreparator;
@@ -76,6 +78,21 @@ public class HelloVerifyRequestMessage extends HandshakeMessage {
 
     public void setCookieLength(ModifiableByte cookieLength) {
         this.cookieLength = cookieLength;
+    }
+
+    @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        byte[] versionBytes = protocolVersion == null ? null : protocolVersion.getValue();
+        ProtocolVersion version =
+                versionBytes == null ? null : ProtocolVersion.getProtocolVersion(versionBytes);
+        if (version != null) {
+            builder.add("protocolVersion", version);
+        } else {
+            builder.addHex("protocolVersion", versionBytes);
+        }
+        builder.add("cookieLength", cookieLength == null ? null : cookieLength.getValue());
+        builder.addHex("cookie", cookie == null ? null : cookie.getValue());
     }
 
     @Override

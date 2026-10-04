@@ -16,6 +16,7 @@ import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.config.Config;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.PreSharedKeyExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PSKBinder;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.psk.PSKIdentity;
@@ -185,6 +186,76 @@ public class PreSharedKeyExtensionMessage extends ExtensionMessage {
         if (chooser.getPskSets().size() > 0) {
             copyPskSets(chooser.getPskSets(), chooser.getConfig().isLimitPsksToOne());
         }
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "identityListLength",
+                identityListLength == null ? null : identityListLength.getValue());
+        if (identities == null) {
+            builder.addHex(
+                    "identities", identityListBytes == null ? null : identityListBytes.getValue());
+        } else {
+            List<StructuredLogValueBuilder> identityValues = new LinkedList<>();
+            for (PSKIdentity identity : identities) {
+                if (identity == null) {
+                    identityValues.add(null);
+                    continue;
+                }
+                identityValues.add(
+                        new StructuredLogValueBuilder()
+                                .add(
+                                        "identityLength",
+                                        identity.getIdentityLength() == null
+                                                ? null
+                                                : identity.getIdentityLength().getValue())
+                                .addHex(
+                                        "identity",
+                                        identity.getIdentity() == null
+                                                ? identity.getIdentityConfig()
+                                                : identity.getIdentity().getValue())
+                                .addHex(
+                                        "obfuscatedTicketAge",
+                                        identity.getObfuscatedTicketAge() == null
+                                                ? null
+                                                : identity.getObfuscatedTicketAge().getValue()));
+            }
+            builder.add("identities", identityValues);
+        }
+        builder.add(
+                "binderListLength",
+                binderListLength == null ? null : binderListLength.getValue());
+        if (binders == null) {
+            builder.addHex(
+                    "binders", binderListBytes == null ? null : binderListBytes.getValue());
+        } else {
+            List<StructuredLogValueBuilder> binderValues = new LinkedList<>();
+            for (PSKBinder binder : binders) {
+                if (binder == null) {
+                    binderValues.add(null);
+                    continue;
+                }
+                binderValues.add(
+                        new StructuredLogValueBuilder()
+                                .add(
+                                        "binderLength",
+                                        binder.getBinderEntryLength() == null
+                                                ? null
+                                                : binder.getBinderEntryLength().getValue())
+                                .addHex(
+                                        "binder",
+                                        binder.getBinderEntry() == null
+                                                ? null
+                                                : binder.getBinderEntry().getValue())
+                                .add("cipherSuite", binder.getBinderCipherConfig()));
+            }
+            builder.add("binders", binderValues);
+        }
+        builder.add(
+                "selectedIdentity",
+                selectedIdentity == null ? null : selectedIdentity.getValue());
     }
 
     @Override

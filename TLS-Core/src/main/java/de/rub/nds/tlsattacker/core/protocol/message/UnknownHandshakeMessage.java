@@ -15,6 +15,7 @@ import de.rub.nds.modifiablevariable.singlebyte.ModifiableByte;
 import de.rub.nds.modifiablevariable.util.ArrayConverter;
 import de.rub.nds.tlsattacker.core.constants.HandshakeMessageType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.UnknownHandshakeHandler;
 import de.rub.nds.tlsattacker.core.protocol.parser.UnknownHandshakeParser;
 import de.rub.nds.tlsattacker.core.protocol.preparator.UnknownHandshakePreparator;
@@ -59,6 +60,21 @@ public class UnknownHandshakeMessage extends HandshakeMessage {
     }
 
     @Override
+    protected void addStructuredLogHandshakeBodyFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogHandshakeBodyFields(builder);
+        Byte typeValue = assumedType == null ? null : assumedType.getValue();
+        HandshakeMessageType type =
+                typeValue == null ? null : HandshakeMessageType.getMessageType(typeValue);
+        if (type != null) {
+            builder.add("assumedHandshakeType", type);
+        } else {
+            builder.addHex(
+                    "assumedHandshakeType", typeValue == null ? null : new byte[] {typeValue});
+        }
+        builder.addHex("data", data == null ? dataConfig : data.getValue());
+    }
+
+    @Override
     public UnknownHandshakeHandler getHandler(TlsContext tlsContext) {
         return new UnknownHandshakeHandler(tlsContext);
     }
@@ -93,24 +109,28 @@ public class UnknownHandshakeMessage extends HandshakeMessage {
 
     @Override
     public String toCompactString() {
-        if (assumedType == null
-                || assumedType.getValue() == HandshakeMessageType.UNKNOWN.getValue()) {
+        if (assumedType == null || assumedType.getValue() == null) {
             return super.toCompactString();
-        } else {
-            HandshakeMessageType assumedHandshakeType =
-                    HandshakeMessageType.getMessageType(assumedType.getValue());
-            return super.toCompactString() + "(" + assumedHandshakeType + "?)";
         }
+        HandshakeMessageType assumedHandshakeType =
+                HandshakeMessageType.getMessageType(assumedType.getValue());
+        if (assumedHandshakeType == HandshakeMessageType.UNKNOWN) {
+            return super.toCompactString()
+                    + " ("
+                    + Byte.toUnsignedInt(assumedType.getValue())
+                    + "?)";
+        }
+        return super.toCompactString() + " (" + assumedHandshakeType + "?)";
     }
 
     @Override
     public String toShortString() {
-        if (assumedType != null
+        if (assumedType == null
+                || assumedType.getValue() == null
                 || assumedType.getValue() == HandshakeMessageType.UNKNOWN.getValue()) {
             return "HS(?)";
-        } else {
-            return "HS(" + assumedType.getValue() + "?)";
         }
+        return "HS(" + Byte.toUnsignedInt(assumedType.getValue()) + "?)";
     }
 
     @Override

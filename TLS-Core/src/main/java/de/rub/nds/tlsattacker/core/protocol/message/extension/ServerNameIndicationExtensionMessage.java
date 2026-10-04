@@ -15,7 +15,9 @@ import de.rub.nds.modifiablevariable.ModifiableVariableProperty;
 import de.rub.nds.modifiablevariable.bytearray.ModifiableByteArray;
 import de.rub.nds.modifiablevariable.integer.ModifiableInteger;
 import de.rub.nds.tlsattacker.core.constants.ExtensionType;
+import de.rub.nds.tlsattacker.core.constants.SniType;
 import de.rub.nds.tlsattacker.core.layer.context.TlsContext;
+import de.rub.nds.tlsattacker.core.protocol.StructuredLogValueBuilder;
 import de.rub.nds.tlsattacker.core.protocol.handler.extension.ServerNameIndicationExtensionHandler;
 import de.rub.nds.tlsattacker.core.protocol.message.extension.sni.ServerNamePair;
 import de.rub.nds.tlsattacker.core.protocol.parser.extension.ServerNameIndicationExtensionParser;
@@ -23,6 +25,8 @@ import de.rub.nds.tlsattacker.core.protocol.preparator.extension.ServerNameIndic
 import de.rub.nds.tlsattacker.core.protocol.serializer.extension.ServerNameIndicationExtensionSerializer;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -76,6 +80,50 @@ public class ServerNameIndicationExtensionMessage extends ExtensionMessage {
 
     public void setServerNameList(List<ServerNamePair> serverNameList) {
         this.serverNameList = serverNameList;
+    }
+
+    @Override
+    protected void addStructuredLogFields(StructuredLogValueBuilder builder) {
+        super.addStructuredLogFields(builder);
+        builder.add(
+                "serverNameListLength",
+                serverNameListLength == null ? null : serverNameListLength.getValue());
+        if (serverNameList == null) {
+            builder.add("serverNames", null);
+            return;
+        }
+        List<StructuredLogValueBuilder> names = new ArrayList<>();
+        for (ServerNamePair pair : serverNameList) {
+            if (pair == null) {
+                names.add(null);
+                continue;
+            }
+            StructuredLogValueBuilder name = new StructuredLogValueBuilder();
+            Byte typeValue =
+                    pair.getServerNameType() == null
+                            ? null
+                            : pair.getServerNameType().getValue();
+            SniType type = typeValue == null ? null : SniType.getNameType(typeValue);
+            if (type != null) {
+                name.add("type", type);
+            } else {
+                name.addHex("type", typeValue == null ? null : new byte[] {typeValue});
+            }
+            name.add(
+                    "length",
+                    pair.getServerNameLength() == null
+                            ? null
+                            : pair.getServerNameLength().getValue());
+            byte[] nameBytes =
+                    pair.getServerName() == null ? null : pair.getServerName().getValue();
+            if (type == SniType.HOST_NAME && nameBytes != null) {
+                name.add("name", new String(nameBytes, StandardCharsets.US_ASCII));
+            } else {
+                name.addHex("name", nameBytes);
+            }
+            names.add(name);
+        }
+        builder.add("serverNames", names);
     }
 
     @Override
