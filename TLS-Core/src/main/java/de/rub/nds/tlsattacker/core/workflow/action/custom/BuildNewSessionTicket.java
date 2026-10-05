@@ -65,6 +65,10 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
     @Override
     public void execute(State state) throws ActionExecutionException {
         SessionTicket ticketOrigin = this.ticketList.get(0);
+        ProtocolVersion protocolVersion =
+                state.getTlsContext(getConnectionAlias())
+                        .getChooser()
+                        .getSelectedProtocolVersion();
 
         NewSessionTicketMessage message = new NewSessionTicketMessage();
         message.setShouldPrepareDefault(false);
@@ -76,25 +80,30 @@ public class BuildNewSessionTicket extends ConnectionBoundAction  {
         }
         message.setTicketLifetimeHint(86400);
 
-        byte[] nonce = serializedTicketNonce(ticketOrigin);
-
-        byte[] identity = ticketOrigin.getIdentity().getValue();
-        if (identity == null || identity.length == 0) {
-            identity = new byte[] { 0x00 }; // 최소 1바이트
+        byte[] identity =
+                ticketOrigin.getIdentity() == null
+                        ? null
+                        : ticketOrigin.getIdentity().getValue();
+        if (identity == null) {
+            identity = new byte[protocolVersion.isTLS13() ? 1 : 0];
         }
 
         SessionTicket ticket = message.getTicket();
-        ticket.setTicketNonce(nonce);
-        ticket.setTicketNonceLength(nonce.length);
         ticket.setIdentity(identity);
         ticket.setIdentityLength(identity.length);
-        ticket.setTicketAgeAdd(ticketOrigin.getTicketAgeAdd());
 
-        message.setExtensionBytes(new byte[0]);
-        message.setExtensionsLength(0);
+        if (protocolVersion.isTLS13()) {
+            byte[] nonce = serializedTicketNonce(ticketOrigin);
+            ticket.setTicketNonce(nonce);
+            ticket.setTicketNonceLength(nonce.length);
+            ticket.setTicketAgeAdd(ticketOrigin.getTicketAgeAdd());
+
+            message.setExtensionBytes(new byte[0]);
+            message.setExtensionsLength(0);
+        }
 
         NewSessionTicketSerializer serializer =
-                new NewSessionTicketSerializer(message, ProtocolVersion.TLS13);
+                new NewSessionTicketSerializer(message, protocolVersion);
         message.setMessageContent(serializer.serializeHandshakeMessageContent());
         message.setLength(message.getMessageContent().getValue().length);
         message.setCompleteResultingMessage(serializer.serialize());
