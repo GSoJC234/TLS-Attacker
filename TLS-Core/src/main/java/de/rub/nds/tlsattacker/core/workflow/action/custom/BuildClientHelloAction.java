@@ -39,7 +39,6 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<CompressionMethod> compression_container = null;
 
     private static final int RANDOM_LENGTH_FALLBACK = 4393139;
-    private static final int LONG_CIPHER_SUITES_LEN = 500;
 
     public BuildClientHelloAction() {
         super();
@@ -68,17 +67,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
     }
 
     public void setCipherSuites(List<CipherSuite> suite_container) {
-        this.suite_container = suite_container;
-    }
-
-    public void setLongCipherSuites(List<CipherSuite> suite_container) {
         this.suite_container = new ArrayList<>(suite_container);
-        for(int i = 0; i < suite_container.size() - 1; i++) {
-            this.suite_container.add(suite_container.get(i));
-        }
-        for (int i = 0; i < LONG_CIPHER_SUITES_LEN; i++) {
-            this.suite_container.add(suite_container.get(suite_container.size() - 1));
-        }
     }
 
     public void setRandom(List<byte[]> random_container) {
