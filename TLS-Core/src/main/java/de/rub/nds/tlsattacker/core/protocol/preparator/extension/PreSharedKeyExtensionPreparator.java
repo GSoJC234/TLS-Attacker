@@ -196,7 +196,6 @@ public class PreSharedKeyExtensionPreparator
                                         new byte[0],
                                         mac.getMacLength());
 
-                        tlsContext.getDigest().setRawBytes(relevantBytes);
                         SecretKeySpec keySpec = new SecretKeySpec(binderFinKey, mac.getAlgorithm());
                         mac.init(keySpec);
                         mac.update(
@@ -204,9 +203,9 @@ public class PreSharedKeyExtensionPreparator
                                         .getDigest()
                                         .digest(
                                                 ProtocolVersion.TLS13,
-                                                pskSets.get(x).getCipherSuite()));
+                                                pskSets.get(x).getCipherSuite(),
+                                                relevantBytes));
                         byte[] binderVal = mac.doFinal();
-                        tlsContext.getDigest().setRawBytes(new byte[0]);
 
                         LOGGER.debug("Using PSK: {}", psk);
                         LOGGER.debug("Calculated Binder: {}", binderVal);

@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import de.rub.nds.tlsattacker.core.constants.CipherSuite;
 import de.rub.nds.tlsattacker.core.constants.ProtocolVersion;
+import java.security.MessageDigest;
 import java.security.Security;
 import java.util.stream.Stream;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -104,6 +105,24 @@ public class MessageDigestCollectorTest {
             ProtocolVersion providedProtocolVersion, CipherSuite providedCipherSuite) {
         digest.setRawBytes(testArray);
         assertDoesNotThrow(() -> digest.digest(providedProtocolVersion, providedCipherSuite));
+    }
+
+    @Test
+    public void testDigestWithAdditionalBytesDoesNotMutateTranscript() throws Exception {
+        byte[] transcriptPrefix = new byte[] {1, 2};
+        byte[] additionalBytes = new byte[] {3, 4};
+        byte[] expected =
+                MessageDigest.getInstance("SHA-256").digest(new byte[] {1, 2, 3, 4});
+        digest.setRawBytes(transcriptPrefix);
+
+        byte[] actual =
+                digest.digest(
+                        ProtocolVersion.TLS13,
+                        CipherSuite.TLS_AES_128_GCM_SHA256,
+                        additionalBytes);
+
+        assertArrayEquals(expected, actual);
+        assertArrayEquals(transcriptPrefix, digest.getRawBytes());
     }
 
     /** Test of reset method, of class MessageDigestCollector. */

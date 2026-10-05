@@ -46,6 +46,20 @@ public class MessageDigestCollector {
     }
 
     public byte[] digest(ProtocolVersion version, CipherSuite suite) {
+        return digest(version, suite, null);
+    }
+
+    /**
+     * Computes the digest over the collected transcript followed by {@code additionalBytes}
+     * without modifying the collected transcript.
+     *
+     * @param version the protocol version used to select the digest algorithm
+     * @param suite the cipher suite used to select the digest algorithm
+     * @param additionalBytes bytes to hash after the collected transcript, or {@code null}
+     * @return the computed transcript hash
+     */
+    public byte[] digest(
+            ProtocolVersion version, CipherSuite suite, byte[] additionalBytes) {
         try {
             MessageDigest hash1;
             MessageDigest hash2 = null;
@@ -66,9 +80,15 @@ public class MessageDigestCollector {
                 }
             }
             hash1.update(stream.toByteArray());
+            if (additionalBytes != null) {
+                hash1.update(additionalBytes);
+            }
             byte[] digest = hash1.digest();
             if (hash2 != null) {
                 hash2.update(stream.toByteArray());
+                if (additionalBytes != null) {
+                    hash2.update(additionalBytes);
+                }
                 byte[] d2 = hash2.digest();
                 digest = ArrayConverter.concatenate(digest, d2);
             }

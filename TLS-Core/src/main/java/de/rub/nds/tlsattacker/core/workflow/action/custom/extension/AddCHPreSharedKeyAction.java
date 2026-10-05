@@ -86,13 +86,9 @@ public class AddCHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         msg.setBinderListLength(msg.getBinderListBytes().getValue().length);
     }
 
-    /**
-     * Compute binders given the full ClientHello bytes that already contain the PSK extension
-     * with ZERO-filled binders of the correct length.
-     */
-    private void calculateBinders(byte[] clientHelloWithZeroBinders,
-                                  PreSharedKeyExtensionMessage msg,
-                                  Chooser chooser) {
+    /** Computes binders over the current transcript followed by the truncated ClientHello. */
+    private void calculateBinders(
+            byte[] truncatedClientHello, PreSharedKeyExtensionMessage msg, Chooser chooser) {
         TlsContext tlsContext = chooser.getContext().getTlsContext();
         List<PskSet> pskSets = chooser.getPskSets();
 
@@ -101,8 +97,9 @@ public class AddCHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
             return;
         }
 
-        LOGGER.debug("Calculating Binders over zero-filled ClientHello (len={})",
-                clientHelloWithZeroBinders != null ? clientHelloWithZeroBinders.length : 0);
+        LOGGER.debug(
+                "Calculating Binders over truncated ClientHello (len={})",
+                truncatedClientHello != null ? truncatedClientHello.length : 0);
 
         for (int x = 0; x < msg.getBinders().size(); x++) {
             try {
@@ -143,13 +140,16 @@ public class AddCHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
                         HKDFunction.expandLabel(
                                 hkdfAlgorithm, binderKey, HKDFunction.FINISHED, new byte[0], macLen);
 
-                // Transcript-Hash over ClientHello that includes PSK extension with zeroed binders
-                tlsContext.getDigest().setRawBytes(clientHelloWithZeroBinders);
                 SecretKeySpec keySpec = new SecretKeySpec(binderFinKey, mac.getAlgorithm());
                 mac.init(keySpec);
-                mac.update(tlsContext.getDigest().digest(ProtocolVersion.TLS13, suiteForPsk));
+                mac.update(
+                        tlsContext
+                                .getDigest()
+                                .digest(
+                                        ProtocolVersion.TLS13,
+                                        suiteForPsk,
+                                        truncatedClientHello));
                 byte[] binderVal = mac.doFinal();
-                tlsContext.getDigest().setRawBytes(new byte[0]);
 
                 LOGGER.debug("Using PSK[{}] (len={}): {}", x, psk.length, bytesToHexString(psk));
                 LOGGER.debug("Calculated Binder[{}] (len={}): {}", x, binderVal.length, bytesToHexString(binderVal));
