@@ -30,7 +30,6 @@ public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
     @XmlTransient protected List<ProtocolMessage> container = null;
     @XmlTransient protected List<T> extension_container = null;
     @XmlTransient protected List<Integer> extension_len = null;
-    @XmlTransient protected boolean longExtension = false;
 
     public AddExtensionAction() {
         super();
@@ -56,11 +55,6 @@ public abstract class AddExtensionAction<T> extends ConnectionBoundAction {
 
     public void setExtensions(List<T> extension_container) {
         this.extension_container = extension_container;
-    }
-
-    public void setLongExtensions(List<T> extension_container) {
-        this.extension_container = extension_container;
-        this.longExtension = true;
     }
 
     public void setExtensionLen(List<Integer> extension_len) {

@@ -22,15 +22,12 @@ import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 @XmlRootElement(name = "AddSignatureAlgorithmCertsAction")
 public class AddSignatureAlgorithmCertsAction
         extends AddExtensionAction<SignatureAndHashAlgorithm> {
-
-    private static final int LONG_SIGNATURE_ALGORITHM_LEN = 2000;
 
     public AddSignatureAlgorithmCertsAction() {
         super();
@@ -58,21 +55,8 @@ public class AddSignatureAlgorithmCertsAction
                 new SignatureAlgorithmsCertExtensionMessage();
         message.setExtensionType(ExtensionType.SIGNATURE_ALGORITHMS_CERT.getValue());
 
-        List<SignatureAndHashAlgorithm> signatureAndHashAlgorithmList;
-        if (super.longExtension) {
-            signatureAndHashAlgorithmList = new ArrayList<>();
-            for (int i = 0; i < extension_container.size() - 1; i++) {
-                signatureAndHashAlgorithmList.add(extension_container.get(i));
-            }
-            for (int i = 0; i < LONG_SIGNATURE_ALGORITHM_LEN; i++) {
-                signatureAndHashAlgorithmList.add(
-                        extension_container.get(extension_container.size() - 1));
-            }
-        } else {
-            signatureAndHashAlgorithmList = extension_container;
-        }
         message.setSignatureAndHashAlgorithms(
-                serializeSignatureAndHashAlgorithm(signatureAndHashAlgorithmList));
+                serializeSignatureAndHashAlgorithm(extension_container));
         message.setSignatureAndHashAlgorithmsLength(
                 message.getSignatureAndHashAlgorithms().getValue().length);
 
