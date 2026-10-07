@@ -11,6 +11,7 @@ package de.rub.nds.tlsattacker.core.workflow.action.custom;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import de.rub.nds.tlsattacker.core.constants.CipherSuite;
@@ -71,7 +72,47 @@ public class BuildClientHelloActionTest {
         assertThrows(ActionExecutionException.class, () -> buildClientHello(originalSessionId, 256));
     }
 
+    @Test
+    public void serializesInvalidCompressionWithoutRecognizingItOnReceive() {
+        ClientHelloMessage message = buildClientHelloWithRawCompressions(new byte[] {(byte) 0x7f});
+        byte[] wire = message.getCompleteResultingMessage().getValue();
+
+        assertArrayEquals(new byte[] {(byte) 0x7f}, message.getCompressions().getValue());
+        assertEquals(1, message.getCompressionLength().getValue());
+        assertEquals(1, Byte.toUnsignedInt(wire[43]));
+        assertEquals(0x7f, Byte.toUnsignedInt(wire[44]));
+        assertNull(CompressionMethod.getCompressionMethod((byte) 0x7f));
+    }
+
+    @Test
+    public void serializesSixteenAndSeventeenCompressionMethodsWithMatchingLength() {
+        for (int size : new int[] {16, 17}) {
+            ClientHelloMessage message =
+                    buildClientHello(new byte[0], null, java.util.Collections.nCopies(size, CompressionMethod.NULL));
+            byte[] wire = message.getCompleteResultingMessage().getValue();
+
+            assertEquals(size, message.getCompressions().getValue().length);
+            assertEquals(size, message.getCompressionLength().getValue());
+            assertEquals(size, Byte.toUnsignedInt(wire[43]));
+        }
+    }
+
     private ClientHelloMessage buildClientHello(byte[] sessionId, Integer sessionIdLength) {
+        return buildClientHello(sessionId, sessionIdLength, List.of(CompressionMethod.NULL));
+    }
+
+    private ClientHelloMessage buildClientHello(
+            byte[] sessionId, Integer sessionIdLength, List<CompressionMethod> compressions) {
+        return buildClientHello(sessionId, sessionIdLength, compressions, null);
+    }
+
+    private ClientHelloMessage buildClientHelloWithRawCompressions(byte[] compressions) {
+        return buildClientHello(new byte[0], null, null, compressions);
+    }
+
+    private ClientHelloMessage buildClientHello(
+            byte[] sessionId, Integer sessionIdLength, List<CompressionMethod> compressions,
+            byte[] rawCompressions) {
         List<ProtocolMessage> messages = new ArrayList<>();
         BuildClientHelloAction action =
                 new BuildClientHelloAction("client", messages);
@@ -85,7 +126,11 @@ public class BuildClientHelloActionTest {
         } else {
             action.setSessionIdLength(List.of(sessionIdLength));
         }
-        action.setCompressions(List.of(CompressionMethod.NULL));
+        if (rawCompressions == null) {
+            action.setCompressions(compressions);
+        } else {
+            action.setCompressionBytes(rawCompressions);
+        }
 
         action.execute(new State());
 

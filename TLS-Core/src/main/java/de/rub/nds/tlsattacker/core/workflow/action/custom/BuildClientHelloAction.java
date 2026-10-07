@@ -38,6 +38,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<byte[]> session_id_container = null;
     @XmlTransient private List<Integer> compression_len = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
+    @XmlTransient private byte[] compression_bytes = null;
 
     private static final int RANDOM_LENGTH_FALLBACK = 4393139;
 
@@ -81,6 +82,13 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
 
     public void setCompressions(List<CompressionMethod> compression_container) {
         this.compression_container = compression_container;
+        this.compression_bytes = null;
+    }
+
+    /** Sets raw ClientHello compression bytes for test cases containing unknown values. */
+    public void setCompressionBytes(byte[] compression_bytes) {
+        this.compression_bytes = compression_bytes == null ? null : compression_bytes.clone();
+        this.compression_container = null;
     }
 
     public void setCipherSuitesLen(List<Integer> cipherSuitesLen) {
@@ -153,7 +161,10 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         }
         message.setSessionIdLength(len2);
 
-        message.setCompressions(serializeCompressionMethods(compression_container));
+        byte[] compressions = compression_bytes == null
+                ? serializeCompressionMethods(compression_container)
+                : compression_bytes.clone();
+        message.setCompressions(compressions);
         int defaultLen3 = message.getCompressions().getValue().length;
         int len3 = (compression_len == null) ? defaultLen3
                 : SizeCalculator.calculate(compression_len.get(0), defaultLen3, HandshakeByteLength.COMPRESSION_LENGTH);
