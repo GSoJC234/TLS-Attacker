@@ -37,6 +37,7 @@ import de.rub.nds.tlsattacker.transport.ConnectionEndType;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -194,9 +195,7 @@ public class AddCHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
                     id.setIdentityLength(0);
                 }
 
-                // NOTE: Real obfuscated age is (age_ms + ticket_age_add) mod 2^32.
-                // Here we keep prior behavior as provided by the caller.
-                id.setObfuscatedTicketAge(t.getTicketAgeAdd().getValue());
+                id.setObfuscatedTicketAge(calculateObfuscatedTicketAge(t));
                 identities.add(id);
 
                 // Binder dummy (ZERO-filled) with correct hash length
@@ -257,6 +256,21 @@ public class AddCHPreSharedKeyAction extends AddExtensionAction<SessionTicket> {
         message.setExtensionLength(message.getExtensionContent().getValue().length);
         message.setExtensionBytes(serializer.serialize());
         return message;
+    }
+
+    private byte[] calculateObfuscatedTicketAge(SessionTicket ticket) {
+        if (ticket.getTicketAgeAdd() == null || ticket.getTicketAgeAdd().getValue() == null) {
+            throw new IllegalArgumentException("Session ticket is missing ticket_age_add");
+        }
+        byte[] ticketAgeAdd = ticket.getTicketAgeAdd().getValue();
+        if (ticketAgeAdd.length != Integer.BYTES) {
+            throw new IllegalArgumentException("ticket_age_add must be exactly four bytes");
+        }
+
+        long elapsedMillis = ticket.getTicketAgeMillis() == null ? 0L : ticket.getTicketAgeMillis();
+        long ageAdd = Integer.toUnsignedLong(ByteBuffer.wrap(ticketAgeAdd).getInt());
+        long obfuscatedTicketAge = ((elapsedMillis & 0xFFFF_FFFFL) + ageAdd) & 0xFFFF_FFFFL;
+        return ByteBuffer.allocate(Integer.BYTES).putInt((int) obfuscatedTicketAge).array();
     }
 
     /**

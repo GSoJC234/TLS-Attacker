@@ -37,6 +37,8 @@ public class SessionTicket extends ModifiableVariableHolder {
 
     @ModifiableVariableProperty() private ModifiableInteger ticketNonceLength;
 
+    private Long ticketAgeMillis;
+
     public SessionTicket() {}
 
     public ModifiableByteArray getKeyName() {
@@ -163,6 +165,21 @@ public class SessionTicket extends ModifiableVariableHolder {
     public void setTicketAgeAdd(byte[] ticketAgeAdd) {
         this.ticketAgeAdd =
                 ModifiableVariableFactory.safelySetValue(this.ticketAgeAdd, ticketAgeAdd);
+    }
+
+    /**
+     * Returns an explicit elapsed ticket age used by deterministic workflow scenarios.
+     * A {@code null} value leaves the age at zero milliseconds.
+     */
+    public Long getTicketAgeMillis() {
+        return ticketAgeMillis;
+    }
+
+    public void setTicketAgeMillis(long ticketAgeMillis) {
+        if (ticketAgeMillis < 0) {
+            throw new IllegalArgumentException("Ticket age in milliseconds must not be negative");
+        }
+        this.ticketAgeMillis = ticketAgeMillis;
     }
 
     /**
