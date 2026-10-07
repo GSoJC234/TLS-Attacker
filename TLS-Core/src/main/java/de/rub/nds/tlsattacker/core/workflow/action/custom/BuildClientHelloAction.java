@@ -34,6 +34,7 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
     @XmlTransient private List<CipherSuite> suite_container = null;
     @XmlTransient private List<byte[]> random_container = null;
     @XmlTransient private List<Integer> sessionIdLen = null;
+    @XmlTransient private List<Integer> sessionIdLength = null;
     @XmlTransient private List<byte[]> session_id_container = null;
     @XmlTransient private List<Integer> compression_len = null;
     @XmlTransient private List<CompressionMethod> compression_container = null;
@@ -86,8 +87,14 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         this.cipherSuitesLen = cipherSuitesLen;
     }
 
+    /** Sets the existing length-field mutation category, not the SessionID payload size. */
     public void setSessionIdLen(List<Integer> sessionIdLen) {
         this.sessionIdLen = sessionIdLen;
+    }
+
+    /** Sets the exact on-wire SessionID length field, independently of its payload size. */
+    public void setSessionIdLength(List<Integer> sessionIdLength) {
+        this.sessionIdLength = sessionIdLength;
     }
 
     public void setCompressionsLen(List<Integer> compression_len) {
@@ -125,15 +132,25 @@ public class BuildClientHelloAction extends ConnectionBoundAction {
         message.setUnixTime(new byte[] {0x00, 0x00}); // dummy
         message.setRandom(random_container.get(0));
 
-        int defaultLen2 = 0;
+        byte[] sessionId = new byte[] {};
         if (session_id_container != null && session_id_container.get(0) != null) {
-            message.setSessionId(session_id_container.get(0));
-            defaultLen2 = message.getSessionId().getValue().length;
-        } else {
-            message.setSessionId(new byte[]{});
+            sessionId = session_id_container.get(0);
         }
-        int len2 = (sessionIdLen == null) ? defaultLen2
-                : SizeCalculator.calculate(sessionIdLen.get(0), defaultLen2, HandshakeByteLength.SESSION_ID_LENGTH);
+        message.setSessionId(sessionId);
+        int defaultLen2 = message.getSessionId().getValue().length;
+        int len2;
+        if (sessionIdLength != null) {
+            if (sessionIdLength.size() != 1 || sessionIdLength.get(0) == null) {
+                throw new ActionExecutionException("BuildClientHelloAction requires one exact SessionID length field");
+            }
+            len2 = sessionIdLength.get(0);
+            if (len2 < 0 || len2 > 255) {
+                throw new ActionExecutionException("SessionID length field must be between 0 and 255");
+            }
+        } else {
+            len2 = (sessionIdLen == null) ? defaultLen2
+                    : SizeCalculator.calculate(sessionIdLen.get(0), defaultLen2, HandshakeByteLength.SESSION_ID_LENGTH);
+        }
         message.setSessionIdLength(len2);
 
         message.setCompressions(serializeCompressionMethods(compression_container));
