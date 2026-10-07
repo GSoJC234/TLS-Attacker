@@ -33,6 +33,7 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
     @XmlTransient private List<ProtocolMessageType> record_type_container = null;
     @XmlTransient private List<ProtocolVersion> version_container = null;
+    @XmlTransient private byte[] protocol_version_bytes = null;
     @XmlTransient private List<ProtocolMessage> message_container = null;
     @XmlTransient private List<Integer> message_length = null;
 
@@ -59,6 +60,13 @@ public class BuildRecordAction extends ConnectionBoundAction {
 
     public void setProtocolVersion(List<ProtocolVersion> version_container) {
         this.version_container = version_container;
+    }
+
+    public void setProtocolVersionBytes(byte[] protocolVersionBytes) {
+        if (protocolVersionBytes == null || protocolVersionBytes.length != RecordByteLength.PROTOCOL_VERSION) {
+            throw new IllegalArgumentException("Record protocol version must be exactly 2 bytes");
+        }
+        this.protocol_version_bytes = protocolVersionBytes.clone();
     }
 
     public void setProtocolMessage(List<ProtocolMessage> message_container) {
@@ -113,7 +121,11 @@ public class BuildRecordAction extends ConnectionBoundAction {
             record.setShouldPrepare(false); // 암호화/직렬화는 EncryptAction에서
             record.setContentType(msgType.getValue());
             record.setContentMessageType(msgType);
-            record.setProtocolVersion(ProtocolVersion.TLS12.getValue());            // 0x0303
+            if (protocol_version_bytes != null) {
+                record.setProtocolVersion(protocol_version_bytes.clone());
+            } else {
+                record.setProtocolVersion(ProtocolVersion.TLS12.getValue());            // 0x0303
+            }
             record.setCleanProtocolMessageBytes(message.getCompleteResultingMessage());
         } else {
             // === 평문 구간(TLS1.2 전체 + TLS1.3의 CH/SH/HRR 등): 기존 방식 그대로 직렬화 ===
@@ -121,7 +133,9 @@ public class BuildRecordAction extends ConnectionBoundAction {
             record.setContentType(msgType.getValue());
             record.setContentMessageType(msgType);
 
-            if (version_container != null && !version_container.isEmpty()) {
+            if (protocol_version_bytes != null) {
+                record.setProtocolVersion(protocol_version_bytes.clone());
+            } else if (version_container != null && !version_container.isEmpty()) {
                 record.setProtocolVersion(version_container.get(0).getValue());
             } else {
                 record.setProtocolVersion(ctx.getChooser().getSelectedProtocolVersion().getValue());
