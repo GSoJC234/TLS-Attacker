@@ -24,6 +24,7 @@ import java.util.Set;
 public class BuildChangeCipherSpecAction extends ConnectionBoundAction {
 
     @XmlTransient protected List<ProtocolMessage> container = null;
+    @XmlTransient private boolean ccsProtocolTypeValid = true;
 
     public BuildChangeCipherSpecAction() {
         super();
@@ -47,12 +48,16 @@ public class BuildChangeCipherSpecAction extends ConnectionBoundAction {
         this.container = container;
     }
 
+    public void setCcsProtocolTypeValid(boolean ccsProtocolTypeValid) {
+        this.ccsProtocolTypeValid = ccsProtocolTypeValid;
+    }
+
     @Override
     public void execute(State state) throws ActionExecutionException {
         ChangeCipherSpecMessage message = new ChangeCipherSpecMessage();
         message.setShouldPrepareDefault(false);
 
-        message.setCcsProtocolType(new byte[] {1});
+        message.setCcsProtocolType(new byte[] {(byte) (ccsProtocolTypeValid ? 1 : 0)});
 
         ChangeCipherSpecSerializer serializer = new ChangeCipherSpecSerializer(message);
         message.setCompleteResultingMessage(serializer.serialize());
